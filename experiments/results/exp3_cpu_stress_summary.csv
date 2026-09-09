@@ -1,0 +1,2 @@
+config,n_runs,detection_seconds_max,detection_seconds_mean,detection_seconds_min,detection_seconds_n,detection_seconds_std,peak_cpu_percent_max,peak_cpu_percent_mean,peak_cpu_percent_min,peak_cpu_percent_n,peak_cpu_percent_std,run_max,run_mean,run_min,run_n,run_std
+all,20,18.5791,5.6521,1.5096,20,3.682,100.643,96.5881,63.3507,20,9.9958,20.0,10.5,1.0,20,5.7663

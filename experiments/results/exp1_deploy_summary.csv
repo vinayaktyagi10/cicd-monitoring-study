@@ -1,0 +1,5 @@
+config,n_runs,elapsed_seconds_max,elapsed_seconds_mean,elapsed_seconds_min,elapsed_seconds_n,elapsed_seconds_std,run_max,run_mean,run_min,run_n,run_std,wall_seconds_max,wall_seconds_mean,wall_seconds_min,wall_seconds_n,wall_seconds_std
+manual,20,0.4271,0.4181,0.4131,20,0.0029,20.0,10.5,1.0,20,5.7663,0.6331,0.5924,0.5773,20,0.0197
+docker,20,0.6235,0.5291,0.4144,20,0.1014,20.0,10.5,1.0,20,5.7663,1.5806,1.4538,1.2668,20,0.1066
+full_pipeline,20,0.4303,0.4256,0.4211,20,0.0032,20.0,10.5,1.0,20,5.7663,1.6364,1.5518,1.4848,20,0.0308
+docker_cicd,8,55.3624,50.2307,44.4036,7,3.8165,8.0,4.5,1.0,8,2.2913,65.5805,53.0873,0.9452,8,20.008
