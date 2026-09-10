@@ -57,13 +57,18 @@ echo
 run "curl -s localhost:8000/metrics | grep app_ | head -10"
 pause
 
-step "CI/CD in progress (real GitHub Actions)" "Trigger a real workflow run on GitHub's servers and watch it execute live. Open https://github.com/vinayaktyagi10/cicd-monitoring-study/actions in a browser now to watch it in the UI at the same time."
-run "gh workflow run ci.yml --ref master"
-echo "Waiting for the run to register..."
-sleep 6
-RUN_ID=$(gh run list --workflow=ci.yml --limit 1 --json databaseId --jq '.[0].databaseId')
-echo "${YELLOW}\$ gh run watch $RUN_ID --exit-status${RESET}"
-gh run watch "$RUN_ID" --exit-status
+step "CI/CD in progress (real GitHub Actions)" "Trigger a real workflow run on GitHub's servers and watch it execute live. Open https://github.com/vinayaktyagi10/cicd-monitoring-study/actions in a browser now to watch it in the UI at the same time. This step is optional — it takes ~45-65s of real CI time and uses Actions minutes."
+read -rp "Run this step? [Y/n] " gha_ans
+if [[ "$gha_ans" == "n" || "$gha_ans" == "N" ]]; then
+    echo "${DIM}Skipped.${RESET}"
+else
+    run "gh workflow run ci.yml --ref master"
+    echo "Waiting for the run to register..."
+    sleep 6
+    RUN_ID=$(gh run list --workflow=ci.yml --limit 1 --json databaseId --jq '.[0].databaseId')
+    echo "${YELLOW}\$ gh run watch $RUN_ID --exit-status${RESET}"
+    gh run watch "$RUN_ID" --exit-status
+fi
 pause
 
 step "Prometheus collecting real metrics" "Prometheus's own view of what it's scraping, and a live query against real data."
