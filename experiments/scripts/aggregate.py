@@ -11,8 +11,9 @@ import glob
 import os
 import statistics
 
-RAW_DIR = "/home/twirly-reflex/Research/cicd-monitoring-study/experiments/raw"
-OUT_DIR = "/home/twirly-reflex/Research/cicd-monitoring-study/experiments/results"
+EXPERIMENTS_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+RAW_DIR = os.path.join(EXPERIMENTS_DIR, "raw")
+OUT_DIR = os.path.join(EXPERIMENTS_DIR, "results")
 
 GROUP_COLUMNS = ["config", "case"]
 

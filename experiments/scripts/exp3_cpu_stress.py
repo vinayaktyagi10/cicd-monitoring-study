@@ -19,6 +19,7 @@ heavy load — process CPU% is the honest, directly-detectable signal.
 """
 import argparse
 import csv
+import os
 import statistics
 import subprocess
 import threading
@@ -26,7 +27,7 @@ import time
 import urllib.parse
 import urllib.request
 
-ROOT = "/home/twirly-reflex/Research/cicd-monitoring-study"
+ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 HEALTH_URL = "http://localhost:8000/health"
 CPU_URL = "http://localhost:8000/cpu?iterations=8000000"
 PROM_QUERY = "http://localhost:9090/api/v1/query"
@@ -128,7 +129,6 @@ def main():
 
     teardown()
 
-    import os
     write_header = not os.path.exists(args.out)
     with open(args.out, "a", newline="") as fh:
         w = csv.DictWriter(fh, fieldnames=["run", "detection_seconds", "peak_cpu_percent", "detected"])

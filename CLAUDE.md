@@ -32,7 +32,8 @@ not the pipeline itself — the pipeline is just the measurement apparatus.
 - CI: GitHub Actions (build, test, Docker build/push).
 - Deployment: Docker / docker-compose, local host.
 - Monitoring: Prometheus + Grafana, local host.
-- Load generation: TBD at experiment-design time (likely `hey` or `locust`).
+- Load generation: dependency-free Python (`ThreadPoolExecutor` + `urllib`),
+  not `hey`/`locust` — see `experiments/scripts/loadgen.py`.
 
 ## Working defaults
 

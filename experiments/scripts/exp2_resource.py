@@ -14,6 +14,7 @@ plus the monitoring-stack containers' own resource draw for the overhead table.
 import argparse
 import csv
 import json
+import os
 import statistics
 import subprocess
 import threading
@@ -21,7 +22,7 @@ import time
 import urllib.error
 import urllib.request
 
-ROOT = "/home/twirly-reflex/Research/cicd-monitoring-study"
+ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 HEALTH_URL = "http://localhost:8000/health"
 
 CASES = {
@@ -171,7 +172,6 @@ def main():
         teardown()
 
     fieldnames = sorted({k for r in rows for k in r.keys()})
-    import os
     write_header = not os.path.exists(args.out)
     with open(args.out, "a", newline="") as fh:
         w = csv.DictWriter(fh, fieldnames=fieldnames)

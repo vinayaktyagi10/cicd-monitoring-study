@@ -19,12 +19,13 @@ as elapsed=None.
 import argparse
 import csv
 import json
+import os
 import subprocess
 import time
 import urllib.error
 import urllib.request
 
-ROOT = "/home/twirly-reflex/Research/cicd-monitoring-study"
+ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 VENV_PY = f"{ROOT}/.venv-manual/bin/python"
 HEALTH_URL = "http://localhost:8000/health"
 PROM_URL = "http://localhost:9090/-/ready"
@@ -161,7 +162,6 @@ def main():
             print(f"[{config}] run {i+1}/{args.runs} success={success} elapsed={elapsed}")
     teardown_all()
 
-    import os
     write_header = not os.path.exists(args.out)
     with open(args.out, "a", newline="") as fh:
         w = csv.DictWriter(fh, fieldnames=["config", "run", "success", "elapsed_seconds", "wall_seconds"])

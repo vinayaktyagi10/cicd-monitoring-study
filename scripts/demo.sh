@@ -90,8 +90,8 @@ echo "${GREEN}Done — check the dashboard now.${RESET}"
 pause
 
 step "The experiment scripts" "Every experiment is a real, readable Python script, not a black box."
-run "ls -la scripts/"
-run "head -40 scripts/exp1_deploy.py"
+run "ls -la experiments/scripts/"
+run "head -40 experiments/scripts/exp1_deploy.py"
 pause
 
 step "The raw data" "Every number in the paper traces back to one of these CSV files."
@@ -101,7 +101,7 @@ run "wc -l experiments/raw/*.csv"
 pause
 
 step "Fresh experimental runs, live, right now" "Re-run a handful of real deployments and watch new rows land with today's timestamp."
-run "python3 scripts/exp1_deploy.py --configs docker --runs 5 --out experiments/raw/exp1_deploy_live_demo.csv"
+run "python3 experiments/scripts/exp1_deploy.py --configs docker --runs 5 --out experiments/raw/exp1_deploy_live_demo.csv"
 run "cat experiments/raw/exp1_deploy_live_demo.csv"
 pause
 

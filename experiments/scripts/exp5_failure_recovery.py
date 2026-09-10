@@ -9,12 +9,13 @@ until both recover (recovery time).
 import argparse
 import csv
 import json
+import os
 import subprocess
 import time
 import urllib.parse
 import urllib.request
 
-ROOT = "/home/twirly-reflex/Research/cicd-monitoring-study"
+ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 HEALTH_URL = "http://localhost:8000/health"
 PROM_QUERY = "http://localhost:9090/api/v1/query"
 CONTAINER = "cicd-monitoring-study-app-1"
@@ -114,7 +115,6 @@ def main():
 
     teardown()
 
-    import os
     write_header = not os.path.exists(args.out)
     with open(args.out, "a", newline="") as fh:
         w = csv.DictWriter(fh, fieldnames=["run", "detection_seconds", "recovery_seconds"])

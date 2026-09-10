@@ -13,11 +13,12 @@ find detection time; `docker inspect` gives ground-truth OOMKilled/RestartCount.
 import argparse
 import csv
 import json
+import os
 import subprocess
 import time
 import urllib.request
 
-ROOT = "/home/twirly-reflex/Research/cicd-monitoring-study"
+ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 CONTAINER = "memstress-app"
 MEM_LIMIT_MB = 150
 HEALTH_URL = "http://localhost:8000/health"
@@ -139,7 +140,6 @@ def main():
 
     cleanup()
 
-    import os
     write_header = not os.path.exists(args.out)
     with open(args.out, "a", newline="") as fh:
         w = csv.DictWriter(fh, fieldnames=["run", "oom_killed", "restart_count",
