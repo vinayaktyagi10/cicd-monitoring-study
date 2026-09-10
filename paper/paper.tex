@@ -6,6 +6,7 @@
 \usepackage{url}
 \usepackage{tikz}
 \usetikzlibrary{positioning, arrows.meta, shapes.geometric}
+\graphicspath{{figures/}}
 
 \begin{document}
 
@@ -228,6 +229,33 @@ observability stack.}
 \label{fig:arch}
 \end{figure}
 
+Fig.~\ref{fig:gha} details the GitHub Actions workflow itself, exactly as
+defined in the repository's \texttt{ci.yml}: a \texttt{test} job (checkout,
+Python 3.12 setup, dependency install, \texttt{pytest}) gates a
+\texttt{docker-build} job (checkout, GHCR login, build and push) via
+\texttt{needs: test} — the build only runs if the tests pass. This is the
+real workflow triggered for every Docker+CI/CD measurement in
+Table~\ref{tab:deploy}, not a simplified stand-in.
+
+\input{figures/fig2_gha_workflow}
+
+Fig.~\ref{fig:grafana} shows the resulting Grafana dashboard under live
+load: request rate and p95 latency by endpoint, the application's
+self-reported process CPU\% and memory, and the Prometheus \texttt{up}
+target-health indicator, all auto-provisioned (no manual dashboard
+configuration) and updating in real time from the same Prometheus instance
+used throughout the experiments.
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=\columnwidth]{fig3_grafana_dashboard.jpg}
+\caption{Grafana dashboard under live load, auto-provisioned against the
+Prometheus datasource. The request-rate and CPU panels show a live traffic
+spike generated during the capture; the target-health panel (bottom, not
+shown in this crop) reports \texttt{up=1}.}
+\label{fig:grafana}
+\end{figure}
+
 \textbf{Subject application.} Rather than an existing multi-service demo
 application, the study uses a small, hand-built FastAPI service with three
 endpoints designed as clean experimental levers: \texttt{/health} (a
@@ -397,6 +425,21 @@ Full pipeline & 1.552 & 0.031 & 1.485 & 1.636 & 20 (0) \\
 \end{tabular}
 \end{table}
 
+\begin{figure}[t]
+\centering
+\includegraphics[width=\columnwidth]{fig4_deploy_time.pdf}
+\caption{Deployment time by configuration (log scale; error bars are one
+standard deviation). Docker adds a small fixed cost over the raw process;
+the full monitoring stack adds almost nothing further on top of Docker;
+CI/CD dominates because it re-runs the full build-and-test cycle rather
+than reusing a pre-built image.}
+\label{fig:deploytime}
+\end{figure}
+
+Fig.~\ref{fig:deploytime} visualizes Table~\ref{tab:deploy} on a log scale,
+since the CI/CD configuration is roughly two orders of magnitude slower than
+the other three and would otherwise flatten them to indistinguishable bars.
+
 \subsection{Resource utilization, throughput, and monitoring overhead (RQ1, RQ3)}
 Table~\ref{tab:resource} reports the application container's own resource use
 and the load test's response characteristics; Table~\ref{tab:overhead}
@@ -434,6 +477,37 @@ Docker & 11.02 (3.23) & 36.11 (0.41) & 5.23 (1.00) & 2737 (206) \\
 \footnotesize Mean (std. dev.), $n=20$ runs of 300 requests each per row.
 \end{table}
 
+\begin{figure}[t]
+\centering
+\includegraphics[width=\columnwidth]{fig5_cpu_utilization.pdf}
+\caption{Application container CPU utilization across the three monitoring
+cases (Table~\ref{tab:resource}, column 1). CPU\% \emph{falls} as more
+monitoring containers are added — the counter-intuitive result discussed
+under RQ3.}
+\label{fig:cpuutil}
+\end{figure}
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=\columnwidth]{fig6_memory_utilization.pdf}
+\caption{Application container memory across the three monitoring cases
+(Table~\ref{tab:resource}, column 2; note the narrow y-axis range). Memory
+is essentially flat at $\approx$36\,MB regardless of how much monitoring
+runs alongside the application — unlike CPU, memory is not shared/contended
+the same way across containers on this host.}
+\label{fig:memutil}
+\end{figure}
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=\columnwidth]{fig7_response_latency.pdf}
+\caption{Mean and p95 request latency across the three monitoring cases
+(Table~\ref{tab:resource}, columns 3-4). Both rise slightly as monitoring
+is added, consistent with the throughput drop and the host-contention
+explanation in Section~\ref{sec:results}.}
+\label{fig:latency}
+\end{figure}
+
 \begin{table}[t]
 \centering
 \caption{Monitoring stack's own resource draw (Table 5: overhead)}
@@ -451,6 +525,9 @@ Grafana & --- & --- & 0.06 & 60.70 \\
 \\[2pt]
 \footnotesize Mean, $n=20$ runs per column.
 \end{table}
+
+Table~\ref{tab:overhead} is visualized in Fig.~\ref{fig:overhead}, alongside
+the failure-detection and MTTD/MTTR figures at the end of this section.
 
 \subsection{CPU stress detection (RQ2)}
 All 20 induced CPU-stress runs were detected by Prometheus, with mean
@@ -492,6 +569,42 @@ consistently $\approx$2.0s (std 0.006s, i.e.\ effectively deterministic),
 which is essentially Uvicorn's own process startup time inside the
 container: recovery time here is dominated by application boot, not by any
 property of the monitoring stack.
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=\columnwidth]{fig8_failure_timeline.pdf}
+\caption{Detection and recovery time across all 20 failure-injection runs.
+Detection (blue) is consistently faster and tighter than recovery (orange)
+across every run, and both are stable run-to-run — neither shows a trend
+over the sequence of 20 trials, supporting the claim that these are
+steady-state properties of the pipeline rather than artifacts of run order.}
+\label{fig:failuretimeline}
+\end{figure}
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=\columnwidth]{fig9_mttd_mttr.pdf}
+\caption{Mean time to detect (MTTD) a CPU-stress event, MTTD for a killed
+container, and mean time to recover (MTTR) after restart, with error bars
+(one standard deviation), computed from the same raw detection/recovery
+times reported in Section~\ref{sec:results}. Binary failure (container
+killed) is detected roughly $5\times$ faster than gradual CPU saturation,
+since a scrape either observes the target down or it doesn't, while a
+saturation threshold must be crossed by an accumulating signal.}
+\label{fig:mttdmttr}
+\end{figure}
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=\columnwidth]{fig10_monitoring_overhead.pdf}
+\caption{Monitoring stack containers' own CPU draw (Table~\ref{tab:overhead}).
+cAdvisor dominates the monitoring stack's own overhead at $\approx$6\% CPU
+in both cases; Prometheus and Grafana are comparatively cheap
+($<$1\% each). This is the overhead the monitoring \emph{tooling} itself
+pays, separate from the host-contention effect on the application shown in
+Fig.~\ref{fig:cpuutil}.}
+\label{fig:overhead}
+\end{figure}
 
 \section{Discussion}
 

@@ -1,0 +1,42 @@
+% Figure 2 — GitHub Actions workflow, matching .github/workflows/ci.yml exactly.
+\begin{figure}[t]
+\centering
+\begin{tikzpicture}[
+  node distance=5mm and 8mm,
+  trig/.style={draw, thick, rounded corners=1pt, fill=gray!12, minimum width=40mm,
+    minimum height=6mm, align=center, font=\small},
+  job/.style={draw, thick, rounded corners=1pt, minimum width=40mm,
+    minimum height=6mm, align=center, font=\small},
+  stepbox/.style={draw, thin, minimum width=36mm, minimum height=5mm,
+    align=center, font=\footnotesize},
+  arr/.style={-{Latex[length=2mm]}, thick}
+]
+  \node[trig] (trigger) {push / pull\_request /\\workflow\_dispatch};
+
+  \node[job, below=of trigger] (testjob) {job: \texttt{test} (ubuntu-latest)};
+  \node[stepbox, below=3mm of testjob] (s1) {checkout};
+  \node[stepbox, below=1mm of s1] (s2) {setup-python 3.12};
+  \node[stepbox, below=1mm of s2] (s3) {pip install -r requirements.txt};
+  \node[stepbox, below=1mm of s3] (s4) {pytest -q};
+
+  \node[job, below=6mm of s4] (buildjob) {job: \texttt{docker-build}\\(needs: test)};
+  \node[stepbox, below=3mm of buildjob] (b1) {checkout};
+  \node[stepbox, below=1mm of b1] (b2) {docker/login-action (GHCR)};
+  \node[stepbox, below=1mm of b2] (b3) {docker/build-push-action\\(build + push image)};
+
+  \draw[arr] (trigger) -- (testjob);
+  \draw[arr] (testjob) -- (s1);
+  \draw[arr] (s1) -- (s2);
+  \draw[arr] (s2) -- (s3);
+  \draw[arr] (s3) -- (s4);
+  \draw[arr] (s4) -- (buildjob);
+  \draw[arr] (buildjob) -- (b1);
+  \draw[arr] (b1) -- (b2);
+  \draw[arr] (b2) -- (b3);
+\end{tikzpicture}
+\caption{GitHub Actions workflow (\texttt{.github/workflows/ci.yml}). The
+\texttt{docker-build} job only runs if \texttt{test} succeeds
+(\texttt{needs: test}); this is the real workflow triggered for the
+Docker+CI/CD deployment-time measurements in Table~\ref{tab:deploy}.}
+\label{fig:gha}
+\end{figure}
