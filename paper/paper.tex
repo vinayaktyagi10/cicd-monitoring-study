@@ -46,8 +46,8 @@ $\to$ +Prometheus $\to$ +Grafana) even as end-to-end throughput drops
 (2737 $\to$ 2641 $\to$ 2449 req/s), consistent with host-level CPU contention
 between the monitoring stack and the application rather than monitoring
 instrumentation overhead inside the application itself. All raw per-run
-measurements and analysis scripts underlying these results are available
-from the author upon reasonable request.
+measurements and analysis scripts underlying these results are published at
+\url{https://github.com/vinayaktyagi10/cicd-monitoring-study}.
 \end{abstract}
 
 \begin{IEEEkeywords}
@@ -597,9 +597,11 @@ resource saturation and induced failure within low-single-digit seconds
 bounded by its scrape interval, and that the dominant cost of running a
 monitoring stack alongside the monitored application on constrained hardware
 is host-level CPU contention between them rather than in-process
-instrumentation overhead. The full raw measurement set underlying every
-table in this paper is retained and available from the author upon
-reasonable request, to support independent verification.
+instrumentation overhead. The full raw measurement set, pipeline
+configuration, and analysis scripts underlying every table in this paper are
+published at
+\url{https://github.com/vinayaktyagi10/cicd-monitoring-study} to support
+independent verification.
 
 \section*{Acknowledgment}
 The author thanks Dr. Dibakar Sinha for his guidance and supervision
