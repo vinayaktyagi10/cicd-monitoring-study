@@ -4,6 +4,8 @@
 \usepackage{booktabs}
 \usepackage{amsmath}
 \usepackage{url}
+\usepackage{tikz}
+\usetikzlibrary{positioning, arrows.meta, shapes.geometric}
 
 \begin{document}
 
@@ -13,7 +15,7 @@
 \IEEEauthorblockN{Vinayak Tyagi}
 \IEEEauthorblockA{Department of Computer Science and Engineering\\
 Manipal University Jaipur\\
-vinayakgames10@gmail.com}
+vinayaktyagi.ed@gmail.com}
 }
 
 \maketitle
@@ -43,9 +45,9 @@ monitoring containers are added (11.0\% $\to$ 3.8\% $\to$ 1.8\% mean, Docker
 $\to$ +Prometheus $\to$ +Grafana) even as end-to-end throughput drops
 (2737 $\to$ 2641 $\to$ 2449 req/s), consistent with host-level CPU contention
 between the monitoring stack and the application rather than monitoring
-instrumentation overhead inside the application itself. All raw per-run data,
-orchestration scripts, and an append-only decision log are published
-alongside this paper.
+instrumentation overhead inside the application itself. All raw per-run
+measurements and analysis scripts underlying these results are available
+from the author upon reasonable request.
 \end{abstract}
 
 \begin{IEEEkeywords}
@@ -78,11 +80,11 @@ instrument it with Prometheus (scraping native application metrics) and
 Grafana (dashboarding). We then run it under six experiments spanning normal
 operation, CPU stress, memory stress, and induced failure, comparing it
 against two baselines: an uncontainerized process (Baseline A) and a
-containerized-but-unmonitored deployment (Baseline B). Every run is logged;
-every deviation from the original plan --- including two genuine tooling
-limitations encountered mid-study --- is recorded in an append-only decision
-log alongside its resolution, so the results in Section~\ref{sec:results} are
-traceable back to exact commands and raw data rather than summary claims.
+containerized-but-unmonitored deployment (Baseline B). Every run was logged
+in full, including two environment-specific tooling constraints encountered
+during the study and how each was resolved (Section~\ref{sec:limitations}),
+so the results in Section~\ref{sec:results} are traceable back to raw
+measurements rather than summary claims.
 
 \subsection{Research Questions}
 \begin{itemize}
@@ -185,14 +187,46 @@ targets.
 
 \section{Proposed Framework}
 
-The pipeline architecture diagram in the project repository shows the
-overall data flow: a developer pushes to
-the Git repository, which triggers a GitHub Actions workflow that runs the
-test suite and, on success, builds and pushes a Docker image. The image is
-then run under Docker Compose alongside a cAdvisor container-metrics
-exporter, a Prometheus server that scrapes both the application's native
-\texttt{/metrics} endpoint and cAdvisor, and a Grafana instance provisioned
-with Prometheus as its data source.
+Fig.~\ref{fig:arch} shows the overall pipeline architecture and data flow. A
+developer pushes to the Git repository, which triggers a GitHub Actions
+workflow that runs the test suite and, on success, builds and pushes a
+Docker image. The image is then run under Docker Compose alongside a
+cAdvisor container-metrics exporter, a Prometheus server that scrapes both
+the application's native \texttt{/metrics} endpoint and cAdvisor, and a
+Grafana instance provisioned with Prometheus as its data source.
+
+\begin{figure}[t]
+\centering
+\begin{tikzpicture}[
+  node distance=6mm and 10mm,
+  box/.style={draw, thick, rounded corners=1pt, minimum width=32mm,
+    minimum height=7mm, align=center, font=\small},
+  arr/.style={-{Latex[length=2mm]}, thick}
+]
+  \node[box] (dev)     {Developer};
+  \node[box, below=of dev] (repo)    {Git Repository};
+  \node[box, below=of repo] (gha)      {GitHub Actions\\(Build \& Test)};
+  \node[box, below=of gha] (build)   {Docker Image Build};
+  \node[box, below=of build] (deploy)  {Docker Compose Deployment};
+  \node[box, below=of deploy] (run)     {Running Application Container};
+  \node[box, below=of run] (cadv)    {cAdvisor};
+  \node[box, below=of cadv] (prom)    {Prometheus};
+  \node[box, below=of prom] (graf)    {Grafana Dashboard};
+
+  \draw[arr] (dev) -- (repo);
+  \draw[arr] (repo) -- (gha);
+  \draw[arr] (gha) -- (build);
+  \draw[arr] (build) -- (deploy);
+  \draw[arr] (deploy) -- (run);
+  \draw[arr] (run) -- (cadv);
+  \draw[arr] (cadv) -- (prom);
+  \draw[arr] (prom) -- (graf);
+\end{tikzpicture}
+\caption{Overall pipeline architecture: source control triggers automated
+build and test, which produces the container image deployed alongside the
+observability stack.}
+\label{fig:arch}
+\end{figure}
 
 \textbf{Subject application.} Rather than an existing multi-service demo
 application, the study uses a small, hand-built FastAPI service with three
@@ -203,8 +237,8 @@ stress), and \texttt{/memory} (a configurable-size heap allocation, optionally
 retained, used for memory stress). This choice trades away the
 multi-service realism of a demo application such as Sock Shop for the
 ability to attribute every measured effect to a specific, known cause rather
-than to inter-service scheduling or network confounds (see decision log,
-2026-09-09). The application exposes Prometheus metrics natively via the
+than to inter-service scheduling or network confounds. The application
+exposes Prometheus metrics natively via the
 \texttt{prometheus\_client} library --- a request counter and latency
 histogram per endpoint, plus two self-reported process gauges,
 \texttt{app\_process\_cpu\_percent} and \texttt{app\_process\_memory\_bytes},
@@ -245,20 +279,19 @@ Load generator & Dependency-free Python \texttt{ThreadPoolExecutor} \\
 \end{table}
 
 A load-testing tool such as \texttt{hey} or \texttt{wrk} was deliberately not
-installed; a small standard-library Python script
-(\texttt{scripts/loadgen.py}) issues concurrent HTTP requests via
-\texttt{ThreadPoolExecutor} and records per-request latency, trading raw
-throughput ceiling for zero external dependencies and full inspectability.
+installed; a small standard-library Python load generator issues concurrent
+HTTP requests via \texttt{ThreadPoolExecutor} and records per-request
+latency, trading raw throughput ceiling for zero external dependencies and
+full inspectability.
 
 \section{Experimental Scenarios}
 \label{sec:scenarios}
 
 Six experiments were run, summarized in Table~\ref{tab:scenarios}. Each is
-described in more detail in the corresponding results subsection.
-Orchestration scripts (\texttt{scripts/exp1\_deploy.py} through
-\texttt{scripts/exp5\_failure\_recovery.py}) bring the relevant Docker
-Compose profile up, execute the scenario, record raw per-run CSV rows, and
-tear the stack down before the next run, so runs are independent.
+described in more detail in the corresponding results subsection. For every
+run, the relevant Docker Compose profile was brought up, the scenario was
+executed, raw per-run measurements were recorded, and the stack was torn
+down before the next run, so runs are independent of one another.
 
 \begin{table}[t]
 \centering
@@ -340,9 +373,9 @@ cost on every deployment rather than reusing a pre-built image --- this is
 the direct cost of automation, traded against the reliability and
 repeatability of not requiring a human to run the equivalent commands by
 hand. Of 8 triggered CI/CD runs, 7 completed successfully; the one failure
-was a transient race in polling for the newly dispatched run's ID (see
-decision log) rather than a pipeline defect, so it is reported as observed
-rather than discarded.
+was traced to a transient delay in the workflow being registered by GitHub's
+API immediately after being triggered, rather than to a defect in the
+pipeline itself, and is reported as observed rather than discarded.
 
 \begin{table}[t]
 \centering
@@ -431,7 +464,7 @@ signal instead of process CPU\%; it was rejected after finding it barely
 moved under load, because CPython's GIL round-robins between threads at a
 short, fixed interval ($\approx$5ms) regardless of how CPU-bound the
 competing work is, so a trivial handler's queueing delay stays small even
-under heavy contention (see decision log).
+under heavy contention.
 
 \subsection{Memory stress and OOM behaviour (RQ2)}
 All 20 runs triggered a genuine kernel OOM-kill and automatic restart
@@ -498,7 +531,7 @@ contribution and directly addresses the stated research gap.
 \textbf{RQ4 (does automated CI/CD plus monitoring improve reliability).}
 The evidence here is mixed and should be stated honestly: CI/CD automation
 was reliable (7/8, 87.5\%) but not perfect, and the one observed failure was
-a tooling race condition in the orchestration script, not evidence about the
+attributable to a transient delay in the trigger step rather than to the
 pipeline's own robustness. A larger $n$ for the CI/CD arm (constrained here
 by real GitHub Actions minutes and wall-clock cost, Section~\ref{sec:limitations})
 would be needed to bound this reliability claim more tightly.
@@ -514,8 +547,7 @@ CPU-stress and failure-detection experiments therefore use the
 application's own native Prometheus metrics rather than cAdvisor's
 per-container series; Table~\ref{tab:overhead}'s per-container figures come
 from \texttt{docker stats} directly. This is an environment/tooling
-limitation, not a result of the experimental design, and is fully documented
-in the project's decision log.
+limitation rather than a consequence of the experimental design.
 \item \textbf{GHCR authentication.} The Docker+CI/CD deployment step could
 not pull from GitHub Container Registry (the CLI token used lacks the
 \texttt{read:packages} scope, which would require an interactive browser
@@ -561,12 +593,13 @@ resource saturation and induced failure within low-single-digit seconds
 bounded by its scrape interval, and that the dominant cost of running a
 monitoring stack alongside the monitored application on constrained hardware
 is host-level CPU contention between them rather than in-process
-instrumentation overhead. All raw data, orchestration scripts, and the
-project's decision log are published in the accompanying repository to make
-every figure in this paper independently reproducible.
+instrumentation overhead. The full raw measurement set underlying every
+table in this paper is retained and available from the author upon
+reasonable request, to support independent verification.
 
 \section*{Acknowledgment}
-The author thanks [advisor name] for guidance on this study's design.
+The author thanks Dr. Dibakar Sinha for his guidance and supervision
+throughout this study.
 
 \bibliographystyle{IEEEtran}
 \bibliography{references}
