@@ -153,8 +153,8 @@ def fig8_failure_timeline():
     recovery = [float(r["recovery_seconds"]) for r in rows]
 
     fig, ax = plt.subplots(figsize=(5.5, 3))
-    ax.plot(runs, detection, "o-", color=BAR_COLOR, label="Detection time")
-    ax.plot(runs, recovery, "s-", color=BAR_COLOR2, label="Recovery time")
+    ax.plot(runs, detection, "o-", color=BAR_COLOR, label="MTTD (detection)")
+    ax.plot(runs, recovery, "s-", color=BAR_COLOR2, label="MTTR (recovery)")
     ax.set_xlabel("Run number (1-20)")
     ax.set_ylabel("Time (s)")
     ax.set_xticks(range(1, 21, 2))

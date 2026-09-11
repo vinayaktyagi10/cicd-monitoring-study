@@ -27,9 +27,13 @@ studied on their own, but comparatively few studies measure their
 \emph{combined} operational effect under a controlled experimental design.
 This paper builds a reproducible pipeline --- Docker, GitHub Actions,
 Prometheus, and Grafana --- around a purpose-built subject application, and
-experimentally evaluates it against two baselines (no containerization; Docker
-without monitoring) and against itself at increasing levels of observability
-(Docker only, Docker+Prometheus, Docker+Prometheus+Grafana). Across six
+experimentally evaluates it against two baselines (Baseline A: no
+containerization; Baseline B: Docker without CI/CD or monitoring), a third,
+non-monitored but CI/CD-enabled configuration (Docker+CI/CD) that isolates
+automation's own cost, and against itself at increasing levels of
+observability once containerized (Docker only, Docker+Prometheus,
+Docker+Prometheus+Grafana --- the last being the full proposed system).
+Across six
 controlled experiments (188 runs total: deployment time and reliability
 across four configurations, resource utilization and monitoring overhead
 across three cases, CPU-stress detection, memory-stress/OOM behaviour, and
@@ -80,8 +84,11 @@ Docker image, automate its build and test via a GitHub Actions workflow, and
 instrument it with Prometheus (scraping native application metrics) and
 Grafana (dashboarding). We then run it under six experiments spanning normal
 operation, CPU stress, memory stress, and induced failure, comparing it
-against two baselines: an uncontainerized process (Baseline A) and a
-containerized-but-unmonitored deployment (Baseline B). Every run was logged
+against two baselines --- an uncontainerized process (Baseline A) and a
+containerized, CI/CD-free, unmonitored deployment (Baseline B) --- and a
+third, intermediate configuration (Docker+CI/CD) that isolates the cost of
+automation alone, before monitoring is added on top to reach the full
+proposed system. Every run was logged
 in full, including two environment-specific tooling constraints encountered
 during the study and how each was resolved (Section~\ref{sec:limitations}),
 so the results in Section~\ref{sec:results} are traceable back to raw
@@ -162,7 +169,7 @@ evaluation is qualitative/subjective, not a controlled quantitative
 comparison against a non-monitored or non-automated baseline. \\
 \textbf{This study} & Yes (GitHub Actions) & Yes (Docker Compose) & Yes
 (Prometheus+Grafana) & Deployment time, reliability, CPU/mem utilization,
-throughput, latency, detection time, recovery time --- $n{=}20$ per
+throughput, latency, MTTD, MTTR --- $n{=}20$ per
 configuration where feasible & --- \\
 \bottomrule
 \end{tabular}
@@ -345,14 +352,22 @@ Docker (20), Docker+Prometheus (20), Docker+Prometheus+Grafana (20) \\
 \end{table}
 
 \subsection{Normal operation and baseline comparison (Experiment 1)}
-Four configurations stand in for the paper's Baseline A/B/proposed-system
-design: \emph{manual} (a raw \texttt{uvicorn} process, no container ---
-Baseline A), \emph{Docker} (a locally built and started container, no CI/CD,
-no monitoring --- Baseline B), \emph{Docker+CI/CD} (a real GitHub Actions
+Four configurations are compared, only two of which are baselines proper:
+\emph{manual} (a raw \texttt{uvicorn} process, no container ---
+\textbf{Baseline A}) and \emph{Docker} (a locally built and started
+container, no CI/CD, no monitoring --- \textbf{Baseline B}). The remaining
+two are not baselines but an explicit progression toward the proposed
+system: \emph{Docker+CI/CD} (a real GitHub Actions
 \texttt{workflow\_dispatch} run --- test job then Docker build/push --- timed
-end-to-end, then deployed), and \emph{full pipeline} (Docker Compose bringing
-up the application alongside cAdvisor, Prometheus, and Grafana --- the
-proposed system). For each run, whatever was previously running is torn
+end-to-end, then deployed) is an \textbf{intermediate configuration} that
+isolates what automation alone costs, with monitoring still absent; and
+\emph{full pipeline} (Docker Compose bringing up the application alongside
+cAdvisor, Prometheus, and Grafana) is the \textbf{proposed system}, adding
+observability on top. This ordering --- Baseline A $\to$ Baseline B $\to$
+Docker+CI/CD $\to$ full pipeline --- lets each of containerization,
+automation, and observability be attributed its own marginal cost rather
+than only the combined effect of all three at once. For each run, whatever
+was previously running is torn
 down, the configuration is started, and wall-clock time to the first
 successful health check (and, for the full pipeline, to Prometheus and
 Grafana also responding) is recorded.
@@ -530,8 +545,8 @@ Table~\ref{tab:overhead} is visualized in Fig.~\ref{fig:overhead}, alongside
 the failure-detection and MTTD/MTTR figures at the end of this section.
 
 \subsection{CPU stress detection (RQ2)}
-All 20 induced CPU-stress runs were detected by Prometheus, with mean
-detection time 5.65s (std 3.68s, min 1.51s, max 18.58s) and mean peak
+All 20 induced CPU-stress runs were detected by Prometheus, with mean time
+to detect (MTTD) 5.65s (std 3.68s, min 1.51s, max 18.58s) and mean peak
 self-reported CPU utilization 96.6\% (std 10.0, effectively pegged at one
 full core, consistent with CPython's GIL limiting a single process to
 $\approx$100\% of one core regardless of thread count). The detection floor
@@ -561,23 +576,27 @@ Experiments 3, 5, and 6.
 
 \subsection{Failure detection and recovery (RQ2, RQ4)}
 All 20 induced container failures (\texttt{docker kill}) were detected by
-Prometheus's \texttt{up\{job="app"\}} series, mean 1.15s (std 0.21s, min
-0.82s, max 2.03s) --- close to the theoretical floor set by the 2s scrape
-interval combined with 0.3s poll granularity and Docker's own signal-delivery
-latency. Recovery (container restart to health-check success) was
-consistently $\approx$2.0s (std 0.006s, i.e.\ effectively deterministic),
-which is essentially Uvicorn's own process startup time inside the
-container: recovery time here is dominated by application boot, not by any
-property of the monitoring stack.
+Prometheus's \texttt{up\{job="app"\}} series, mean time to detect (MTTD)
+1.15s (std 0.21s, min 0.82s, max 2.03s) --- close to the theoretical floor
+set by the 2s scrape interval combined with 0.3s poll granularity and
+Docker's own signal-delivery latency. Mean time to recover (MTTR) ---
+container restart to health-check success --- was consistently
+$\approx$2.0s (std 0.006s, i.e.\ effectively deterministic), which is
+essentially Uvicorn's own process startup time inside the container: MTTR
+here is dominated by application boot, not by any property of the
+monitoring stack. From this point on, MTTD and MTTR are used throughout in
+place of "detection time" and "recovery time," consistent with the
+CPU-stress MTTD reported above and with
+Figs.~\ref{fig:failuretimeline}--\ref{fig:mttdmttr}.
 
 \begin{figure}[t]
 \centering
 \includegraphics[width=\columnwidth]{fig8_failure_timeline.pdf}
-\caption{Detection and recovery time across all 20 failure-injection runs.
-Detection (blue) is consistently faster and tighter than recovery (orange)
-across every run, and both are stable run-to-run — neither shows a trend
-over the sequence of 20 trials, supporting the claim that these are
-steady-state properties of the pipeline rather than artifacts of run order.}
+\caption{MTTD and MTTR across all 20 failure-injection runs. MTTD (blue) is
+consistently faster and tighter than MTTR (orange) across every run, and
+both are stable run-to-run — neither shows a trend over the sequence of 20
+trials, supporting the claim that these are steady-state properties of the
+pipeline rather than artifacts of run order.}
 \label{fig:failuretimeline}
 \end{figure}
 
