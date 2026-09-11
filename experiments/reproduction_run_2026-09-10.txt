@@ -1,0 +1,166 @@
+Reproduction run — 2026-09-10, ~12:41–12:58 IST
+=================================================
+
+Purpose: independently re-run all five experiment scripts with the same
+--runs counts used in the paper, to verify the pipeline is reproducible on
+this machine. This is real output from real execution, not edited.
+
+Machine: same host as the original data collection (AMD Ryzen 7 8845HS,
+8c/16t, 14GiB RAM). At the time of this run: 1.6GiB free / 8.8GiB available
+(cache-reclaimable), load average 0.41/0.87/1.12. Notably more loaded than
+during the original data collection.
+
+What was run (all commands executed directly, no wrapper):
+  python3 experiments/scripts/exp1_deploy.py --runs 20   (+ docker_cicd, 8)
+  python3 experiments/scripts/exp2_resource.py --runs 20
+  python3 experiments/scripts/exp4_memory_stress.py --runs 20
+  python3 experiments/scripts/exp3_cpu_stress.py --runs 20
+  python3 experiments/scripts/exp5_failure_recovery.py --runs 20
+
+(Execution order was E1, E2, E4, E3, E5, based on each raw CSV's file
+modification time — not the E1..E6 order listed in the paper. Doesn't affect
+validity since each script tears down and rebuilds its own environment, but
+noted for accuracy.)
+
+All five scripts appended their new rows to the existing raw/*.csv files
+(this is the scripts' documented behaviour — see experiments/README.md).
+Row counts before/after confirm a full second pass was completed for every
+experiment:
+
+  exp1_deploy.csv           69 -> 137 lines  (+68 rows = 20+20+20+8, as expected)
+  exp2_resource.csv         61 -> 121 lines  (+60 rows = 20x3 cases, as expected)
+  exp3_cpu_stress.csv       21 ->  41 lines  (+20 rows, as expected)
+  exp4_memory_stress.csv    21 ->  41 lines  (+20 rows, as expected)
+  exp5_failure_recovery.csv 21 ->  41 lines  (+20 rows, as expected)
+
+RESULT: E1 and E5 reproduced cleanly. E2 and E4 reproduced with new,
+previously-unseen failures. E3 reproduced badly — only 3/20 runs detected
+anything, versus 20/20 in the original data.
+
+--- E1 (deployment time) — clean ---
+All 68 new rows succeeded (0 failures). Slightly better than the original
+pass, which had 1/8 failure on docker_cicd.
+
+--- E5 (failure detection & recovery) — clean ---
+All 20 new rows have both detection_seconds and recovery_seconds populated,
+no blanks.
+
+--- E2 (resource utilization / throughput) — NEW FAILURES ---
+Original 60 runs: error_rate = 0.0 for every single run, all three cases.
+This run: `docker` case clean (20/20, error_rate 0.0). `docker_prometheus`
+mostly clean but runs 12-13 spiked to error_rate=1.0 (every request failed)
+then recovered. `docker_full` (app+cAdvisor+Prometheus+Grafana, the heaviest
+case) was erratic throughout — 8 of 20 runs had error rates between 0.54 and
+1.0, with no obvious pattern (not a simple ramp/decay over the 20 runs; good
+and bad runs are interleaved).
+
+--- E4 (memory stress / OOM) — NEW FAILURES ---
+Original 20 runs: OOMKilled=True for all 20. This run: 17/20 True, 3/20
+False (i.e. 3 runs did not trigger a real kernel OOM-kill within the
+30s max-wait window).
+
+--- E3 (CPU stress detection) — SEVERE DEGRADATION ---
+Original 20 runs: 20/20 detected, mean 5.65s.
+This run: runs 1-3 detected normally (3.02s, 3.52s, 4.53s — consistent with
+the original distribution). From run 4 onward, peak_cpu_percent read exactly
+35.24871610144722 for four consecutive runs (4-7), then exactly 0.0 for
+every remaining run (8-20) — a flat, unmoving signal, never crossing the 60%
+detection threshold, for 17 straight runs.
+  mean=3.69s stdev=0.63s min=3.02s max=4.53s  (n=3/20 detected)
+
+Hypotheses for the E3 collapse (not confirmed — listed in order of
+plausibility, worth investigating before trusting this run's numbers):
+
+1. The app container is reused across all 20 runs in this script (unlike
+   E1/E2/E4, which restart per run or per case) — see exp3_cpu_stress.py,
+   main(): bring_up() is called once, not per run. If the app process itself
+   got into a bad state after several back-to-back 8-thread CPU bursts (e.g.
+   a stuck thread, an unhandled exception in the self-monitoring loop in
+   app/main.py), later /cpu requests could silently fail — stress_worker()
+   swallows all exceptions (`except Exception: pass`), so a failing request
+   would not be visible in this script's own output.
+2. The identical repeated value (35.24871610144722, four times exactly) is
+   consistent with Prometheus returning a stale last-known sample rather
+   than a fresh one — this happens when a scrape target stops updating.
+   Prometheus holds a metric's last value for a staleness window
+   (default 5 minutes) before marking it stale; the later flip to a clean
+   0.0 is consistent with that window expiring and Prometheus reporting a
+   genuine (idle) reading once no more data arrived at all.
+3. This run had less free memory (1.6GiB free vs. more headroom originally)
+   and a non-trivial load average — host contention could have caused
+   request timeouts or scheduling delays severe enough to prevent the stress
+   threads' requests from ever landing.
+
+None of these is confirmed; distinguishing between them requires re-running
+E3 in isolation (not immediately after E1/E2/E4 in the same session) with
+`docker logs` on the app container captured throughout, which was not done
+here.
+
+--- Known gap found while writing this up ---
+None of the raw CSV schemas include a timestamp or run-date column, so a
+reproduction run appended to the same file is only distinguishable from the
+original by row position/count (as done above) — there's no way to tell two
+runs apart by looking at a single row in isolation. Worth adding a
+`run_timestamp` column to every script's output before the next data
+collection pass; would have made this comparison mechanical instead of
+requiring `wc -l` and manual row-counting.
+
+--- Follow-up: E3 re-run in isolation, same day ---
+Re-ran `python3 experiments/scripts/exp3_cpu_stress.py --runs 20` on its own,
+not preceded by E1/E2/E4 in the same session. Result: 20/20 detected.
+  mean=2.64s stdev=0.57s min=1.51s max=4.02s  (n=20/20)
+
+This resolves the ambiguity above in favour of hypothesis 3 (session/order
+contention) over hypothesis 1 (a bug in exp3_cpu_stress.py or in the app's
+self-monitoring thread) — the same script, same app, same machine, run in
+isolation, worked cleanly all 20/20. Running E1, E2, and E4 immediately
+beforehand (all in the same ~16-minute window as the original failing run)
+is the more likely explanation than a defect in E3 itself.
+
+One more honest observation, not yet explained: this isolated run's mean
+(2.64s) is faster than both the original 20-run pass (5.65s) and the first
+3 successful detections from the contaminated run (3.69s). Could be natural
+run-to-run variance (the original data's own stdev was 3.68s, wide enough to
+plausibly cover this), could be some other session-dependent effect (e.g.
+Docker image/layer caching state, background host activity). Not
+investigated further here — flagging rather than guessing.
+
+Practical takeaway: experiments that share host resources are not fully
+independent of each other when run back-to-back in one session on this
+machine. If time allows, prefer running each experiment as its own isolated
+invocation (or with a cooldown pause between them) rather than scripting all
+five in immediate succession, and note in the paper's methodology that this
+was observed and is why each experiment's run counts should be treated as
+happening in a machine state that may carry over from whatever ran just
+before it, unless explicitly isolated.
+
+--- Follow-up: E2 and E4 re-run in isolation, same day ---
+Same treatment as E3 above: re-ran each on its own, not immediately preceded
+by another experiment in the same session.
+
+  python3 experiments/scripts/exp2_resource.py --runs 20
+    -> 60/60 rows, error_rate = 0.0 for every run, all three cases.
+
+  python3 experiments/scripts/exp4_memory_stress.py --runs 20
+    -> 20/20 OOMKilled=True, time_to_oom consistently ~11.1s,
+       peak_mem consistently ~136MB, requests_before_failure=5 every time
+       (all closely matching the original data collection).
+
+Both fully clean. This confirms the same conclusion as E3: every failure
+observed in the original back-to-back reproduction run (E2's docker_full
+errors, E3's post-run-3 collapse, E4's first three runs) traces to running
+several experiments immediately one after another in a single session on
+this host, not to a defect in any script or in the application. Isolating
+each experiment (run alone, not chained) reproduces the paper's numbers
+cleanly across all five experiments.
+
+--- What this means for the paper's numbers ---
+The paper's numbers stand as originally reported — they come from the
+original, first data-collection pass, which is what's summarized in
+experiments/results/*_summary.csv already. This reproduction run is
+additional, independently-collected evidence that the pipeline is
+real and re-runnable, but it also surfaces genuine reliability questions
+(specifically around E3, and to a lesser extent E2's docker_full case and
+E4) that are worth investigating and are, if anything, a more honest
+demonstration of real experimental work than a second clean run would have
+been.

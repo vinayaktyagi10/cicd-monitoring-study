@@ -459,16 +459,31 @@ the other three and would otherwise flatten them to indistinguishable bars.
 Table~\ref{tab:resource} reports the application container's own resource use
 and the load test's response characteristics; Table~\ref{tab:overhead}
 isolates the monitoring stack's own resource draw. Zero errors were observed
-across all 60 runs (180$\times$300 = 18{,}000 requests). Throughput falls
-monotonically as monitoring is added (2737 $\to$ 2641 $\to$ 2449 req/s,
-Docker $\to$ +Prometheus $\to$ +Grafana), and mean/p95 latency both rise
-slightly, consistent with host-level contention for a fixed core budget.
+across all 60 runs (180$\times$300 = 18{,}000 requests). Point estimates for
+throughput fall as monitoring is added (2737 $\to$ 2641 $\to$ 2449 req/s,
+Docker $\to$ +Prometheus $\to$ +Grafana); a Welch's $t$-test (unequal
+variances, $n{=}20$ per case, computed directly from the raw per-run CSV
+rather than from the summary means) confirms the two endpoints of this
+trend are statistically distinguishable (Docker vs.\ +Grafana:
+$t{=}3.57$, $p{=}0.0011$, Cohen's $d{=}1.13$), but the middle step is not
+(Docker vs.\ +Prometheus: $t{=}1.37$, $p{=}0.177$) --- the overall direction
+is real, but the drop is not uniform run-to-run between every adjacent
+pair. Mean and p95 latency both rise numerically but \emph{none} of the
+three pairwise differences reach significance at $\alpha{=}0.05$ (all
+$p \geq 0.36$); this claim is therefore stated only as a directional
+observation, not a confirmed effect, and should not be read as strong
+evidence on its own.
 Counter-intuitively, the application container's own mean CPU\% \emph{falls}
-over the same progression (11.0\% $\to$ 3.8\% $\to$ 1.8\%): as cAdvisor,
+over the same progression (11.0\% $\to$ 3.8\% $\to$ 1.8\%), and here the
+statistical evidence is strong: Docker vs.\ +Prometheus is highly
+significant ($t{=}5.78$, $p{<}0.0001$, $d{=}1.83$, a large effect), though
++Prometheus vs.\ +Grafana is not ($p{=}0.12$) --- the CPU-share cost of
+adding Prometheus itself is real and large, while adding Grafana on top is
+not distinguishable from noise at this sample size. As cAdvisor,
 Prometheus, and Grafana compete for the same physical cores, the application
 container is scheduled less rather than working harder, so its own
-\texttt{docker stats} CPU reading drops even as end-to-end throughput and
-latency both degrade. This is a genuine, non-obvious finding for RQ3:
+\texttt{docker stats} CPU reading drops even as end-to-end throughput
+degrades. This is a genuine, non-obvious finding for RQ3:
 monitoring overhead in this design shows up primarily as
 \emph{host-level contention affecting the monitored workload}, not as
 instrumentation cost inside the monitored process itself (the
@@ -668,9 +683,15 @@ contribution and directly addresses the stated research gap.
 The evidence here is mixed and should be stated honestly: CI/CD automation
 was reliable (7/8, 87.5\%) but not perfect, and the one observed failure was
 attributable to a transient delay in the trigger step rather than to the
-pipeline's own robustness. A larger $n$ for the CI/CD arm (constrained here
+pipeline's own robustness. Critically, 87.5\% is a point estimate that
+should not be quoted on its own: the 95\% Wilson score interval for 7
+successes out of 8 trials is $[52.9\%, 97.8\%]$ --- at this sample size the
+data are consistent with anywhere from roughly half to nearly all CI/CD
+deployments succeeding, and the point estimate alone overstates the
+precision of the claim. A larger $n$ for the CI/CD arm (constrained here
 by real GitHub Actions minutes and wall-clock cost, Section~\ref{sec:limitations})
-would be needed to bound this reliability claim more tightly.
+would be needed to narrow this interval and bound the reliability claim more
+tightly.
 
 \section{Limitations}
 \label{sec:limitations}
@@ -713,6 +734,16 @@ Experiment 4) were chosen to make the induced condition reliably observable
 within a short polling window rather than to model a specific production SLO;
 detection-time figures should be read relative to these thresholds, not as
 threshold-independent constants.
+\item \textbf{Not every reported difference is statistically significant.}
+Welch's $t$-tests on the raw per-run data (\texttt{statistical\_analysis.py})
+confirm the Docker-to-+Grafana endpoints of the throughput and CPU\% trends
+in Section~\ref{sec:results} ($p{<}0.01$ for both), but two things reported
+only as directional observations do not reach significance at
+$\alpha{=}0.05$: the latency increase across all three monitoring cases
+($p \geq 0.36$ for every pair), and the middle step of the throughput trend
+(Docker vs.\ +Prometheus, $p{=}0.177$). Means and standard deviations alone,
+without this check, would have overstated how uniformly these effects hold
+run-to-run.
 \end{itemize}
 
 \section{Conclusion}
