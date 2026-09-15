@@ -171,10 +171,24 @@ def main():
                   f"p95={load_result['p95_latency_ms']:.1f}ms errors={load_result['error_rate']:.3f}")
         teardown()
 
-    fieldnames = sorted({k for r in rows for k in r.keys()})
     write_header = not os.path.exists(args.out)
+    if write_header:
+        # New file: fieldnames are whatever this invocation's rows contain.
+        fieldnames = sorted({k for r in rows for k in r.keys()})
+    else:
+        # Existing file: reuse ITS header rather than recomputing from this
+        # run's rows. A filtered --cases invocation (e.g. just "docker",
+        # which has no cadvisor/prometheus/grafana columns) produces a
+        # narrower row shape than the file's original header; writing with
+        # a fieldnames list that doesn't match the file's actual column
+        # order silently misaligns every value in the row (a real bug hit
+        # while building this demo -- see DECISIONS.md if present, or just:
+        # don't recompute fieldnames from a subset of cases).
+        with open(args.out, newline="") as fh:
+            fieldnames = next(csv.reader(fh))
+
     with open(args.out, "a", newline="") as fh:
-        w = csv.DictWriter(fh, fieldnames=fieldnames)
+        w = csv.DictWriter(fh, fieldnames=fieldnames, restval="")
         if write_header:
             w.writeheader()
         w.writerows(rows)
