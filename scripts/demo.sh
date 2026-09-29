@@ -1,7 +1,4 @@
 #!/usr/bin/env bash
-# Guided, step-by-step demo of the CI/CD monitoring study.
-# Each step prints what it's about to do and why, runs it, then waits for
-# Enter before moving on. Run from anywhere; it cd's to the repo root itself.
 
 set -uo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -11,9 +8,11 @@ BOLD=$(tput bold 2>/dev/null || echo "")
 DIM=$(tput dim 2>/dev/null || echo "")
 GREEN=$(tput setaf 2 2>/dev/null || echo "")
 YELLOW=$(tput setaf 3 2>/dev/null || echo "")
+CYAN=$(tput setaf 6 2>/dev/null || echo "")
 RESET=$(tput sgr0 2>/dev/null || echo "")
 
 STEP_NUM=0
+LOAD_PID=""
 
 pause() {
     echo
@@ -28,40 +27,123 @@ step() {
     echo
 }
 
+say() {
+    echo "${CYAN}Tell him:${RESET} $*"
+    echo
+}
+
 run() {
     echo "${YELLOW}\$ $*${RESET}"
     eval "$@"
 }
 
+show() {
+    echo "${BOLD}Opening in browser:${RESET} $1"
+    echo "${DIM}Look for: $2${RESET}"
+    xdg-open "$1" >/dev/null 2>&1 &
+}
+
+start_load() {
+    ( while true; do
+        curl -s localhost:8000/health >/dev/null
+        curl -s "localhost:8000/cpu?iterations=500000" >/dev/null
+      done ) &
+    LOAD_PID=$!
+}
+
+stop_load() {
+    [[ -n "$LOAD_PID" ]] && kill "$LOAD_PID" 2>/dev/null
+    LOAD_PID=""
+}
+
+trap stop_load EXIT
+
+wait_healthy() {
+    for _ in $(seq 1 30); do
+        curl -sf localhost:8000/health >/dev/null && return 0
+        sleep 1
+    done
+    echo "app did not become healthy"
+}
+
 # ---------------------------------------------------------------------------
 
-step "Repo identity" "Prove this is a real, pushed repository with real history — not something assembled in one sitting."
+step "Repo identity" "A real, pushed repository with its full history."
+say "Everything is on GitHub with the full commit history -- code, raw data, analysis scripts and the paper."
 run "git remote -v"
-run "git log --oneline"
+run "git log --oneline | head -15"
 run 'git log -1 --format="Last commit: %ai"'
 pause
 
-step "The actual machine" "Confirms the hardware matches Table II in the paper exactly."
-run "lscpu | grep -E 'Model name|CPU\(s\):|Thread|Core'"
+step "The machine" "Same hardware as Table II. The OS was reinstalled after data collection."
+say "Same laptop the data was collected on. The paper's Table II lists the OS/Docker versions at collection time; the OS has since been reinstalled, and that's logged in experiments/log.md."
+run "lscpu | grep -E 'Model name|^CPU\(s\):|Thread|Core'"
 run "free -h"
 run "docker --version"
-run "docker compose version"
 pause
 
-step "App running in Docker" "Bring up the subject application as a real container and hit its real HTTP endpoints."
-run "docker compose up -d app"
-sleep 2
-run "docker compose ps"
-run "curl -s localhost:8000/health"
-echo
-run "curl -s localhost:8000/metrics | grep app_ | head -10"
+step "Start the full pipeline" "App + cAdvisor + Prometheus + Grafana, all as Docker containers from one docker-compose.yml."
+say "One command starts four containers: my app, cAdvisor which measures containers, Prometheus which collects the numbers, and Grafana which draws them."
+run "docker compose --profile full up -d"
+wait_healthy
+sleep 3
+run "docker compose --profile full ps --format 'table {{.Name}}\t{{.Status}}\t{{.Ports}}'"
 pause
 
-step "CI/CD in progress (real GitHub Actions)" "Trigger a real workflow run on GitHub's servers and watch it execute live. Open https://github.com/vinayaktyagi10/cicd-monitoring-study/actions in a browser now to watch it in the UI at the same time. This step is optional — it takes ~45-65s of real CI time and uses Actions minutes."
+step "1/5  The application" "A small FastAPI service with a cheap route, a CPU-heavy route and a memory-heavy route."
+say "This is the thing being measured. /health is cheap, /cpu burns CPU, /memory allocates RAM -- those are the levers the stress experiments pull. /metrics is where the app reports its own numbers."
+run "curl -s localhost:8000/health; echo"
+run "curl -s 'localhost:8000/cpu?iterations=500000'; echo"
+run "curl -s 'localhost:8000/memory?mb=5'; echo"
+show "http://localhost:8000/metrics" "app_requests_total, app_process_cpu_percent, app_process_memory_bytes -- raw counters the app exposes"
+pause
+
+step "2/5  cAdvisor" "Measures CPU/memory of every container from outside, via the kernel's cgroups."
+say "cAdvisor watches every container from the outside -- it's how the paper measures what the monitoring stack itself costs (Table VI)."
+show "http://localhost:8080/docker/" "the list of running containers; click one to see its live CPU and memory graphs"
+pause
+
+step "3/5  Prometheus - what it scrapes" "Prometheus pulls /metrics from each target every 2 seconds and stores the time series."
+say "Every 2 seconds Prometheus visits each target and records its numbers. All three targets are UP."
+run "curl -s localhost:9090/api/v1/targets | python3 -c \"import json,sys; [print(t['labels']['job'].ljust(12), t['health']) for t in json.load(sys.stdin)['data']['activeTargets']]\""
+show "http://localhost:9090/targets" "app, cadvisor and prometheus all green / UP, with 'last scrape' ticking"
+pause
+
+step "4/5  Prometheus - live query" "Generating background traffic now so the graphs move."
+say "This is the query the CPU-stress experiment uses: the app's own CPU%. I'm sending traffic now, so you can see it rise."
+start_load
+show "http://localhost:9090/graph?g0.expr=app_process_cpu_percent&g0.tab=0&g0.range_input=5m" "the CPU line climbing as the traffic starts"
+pause
+
+step "5/5  Grafana dashboard" "Auto-provisioned from monitoring/grafana/provisioning -- no manual setup."
+say "Grafana draws the same Prometheus data as a dashboard: request rate, latency, CPU, memory, and whether the app is up."
+show "http://localhost:3000/d/cicd-monitoring-study-app?refresh=5s&from=now-5m&to=now" "request-rate and CPU panels moving under the live traffic; 'Target up/down' at 1"
+pause
+stop_load
+
+step "Live failure: what Experiment 5 measures" "Kill the app container and watch monitoring notice, then bring it back."
+say "Now I crash the app on purpose. Prometheus's next scrape fails, the up signal drops to 0, and the dashboard shows it. The time from crash to that 0 is the MTTD in the paper; the time to healthy again is MTTR."
+show "http://localhost:9090/targets" "keep this tab and the Grafana tab side by side"
+pause
+run "docker kill cicd-monitoring-study-app-1"
+KILL_T=$(date +%s.%N)
+until [[ "$(curl -s 'localhost:9090/api/v1/query?query=up%7Bjob%3D%22app%22%7D' | python3 -c "import json,sys; r=json.load(sys.stdin)['data']['result']; print(r[0]['value'][1] if r else '')")" == "0" ]]; do sleep 0.3; done
+echo "${GREEN}Prometheus reports app DOWN after $(python3 -c "print(round($(date +%s.%N) - $KILL_T, 2))")s${RESET}"
+echo "${DIM}Refresh the targets tab: app is red. Grafana's up/down panel drops to 0.${RESET}"
+pause
+run "docker start cicd-monitoring-study-app-1"
+START_T=$(date +%s.%N)
+wait_healthy
+echo "${GREEN}App healthy again after $(python3 -c "print(round($(date +%s.%N) - $START_T, 2))")s${RESET}"
+pause
+
+step "CI/CD (real GitHub Actions)" "Optional: triggers a real workflow run (test -> docker build -> push). ~45-65s, uses Actions minutes."
+say "Every push runs tests and builds the Docker image on GitHub's servers. The paper's Docker+CI/CD deploy time is this, end to end."
 read -rp "Run this step? [Y/n] " gha_ans
 if [[ "$gha_ans" == "n" || "$gha_ans" == "N" ]]; then
     echo "${DIM}Skipped.${RESET}"
 else
+    show "https://github.com/vinayaktyagi10/cicd-monitoring-study/actions" "the new run appearing at the top"
     run "gh workflow run ci.yml --ref master"
     echo "Waiting for the run to register..."
     sleep 6
@@ -71,64 +153,21 @@ else
 fi
 pause
 
-step "Prometheus collecting real metrics" "Prometheus's own view of what it's scraping, and a live query against real data."
-run "docker compose --profile prometheus up -d"
-sleep 5
-run "curl -s localhost:9090/api/v1/targets | python3 -m json.tool | grep -E 'job|health'"
-echo
-echo "${DIM}Open http://localhost:9090/targets in a browser — both targets should read UP.${RESET}"
-pause
-
-step "Grafana with real data" "The dashboard is auto-provisioned — no manual setup. Generate visible load so a panel moves on screen."
-run "docker compose --profile full up -d"
-sleep 5
-echo "${DIM}Open http://localhost:3000 -> Dashboards -> 'CI/CD Monitoring Study — App Dashboard'.${RESET}"
-pause
-echo "Generating live traffic — watch the request-rate panel move..."
-run "for i in \$(seq 1 60); do curl -s localhost:8000/health > /dev/null; done"
-echo "${GREEN}Done — check the dashboard now.${RESET}"
-pause
-
-step "The experiment scripts" "Every experiment is a real, readable Python script, not a black box."
-run "ls -la experiments/scripts/"
-run "head -40 experiments/scripts/exp1_deploy.py"
-pause
-
-step "The raw data" "Every number in the paper traces back to one of these CSV files."
-run "ls -la experiments/raw/"
-run "head -5 experiments/raw/exp1_deploy.csv"
+step "From experiment to raw data" "Each experiment script does the thing above 20 times and writes one CSV row per run."
+say "Each experiment script automates exactly what we just did by hand, 20 times, and writes one line per run into a CSV. Those files are never edited by hand."
+run "ls experiments/scripts/"
+run "head -6 experiments/raw/exp5_failure_recovery.csv"
 run "wc -l experiments/raw/*.csv"
 pause
 
-step "Fresh experimental runs, live, right now" "Re-run a handful of real deployments and watch new rows land with today's timestamp."
-run "python3 experiments/scripts/exp1_deploy.py --configs docker --runs 5 --out experiments/raw/exp1_deploy_live_demo.csv"
-run "cat experiments/raw/exp1_deploy_live_demo.csv"
+step "From raw data to the paper's tables" "aggregate.py averages the raw rows; paper_tables.py rebuilds every table and checks it against paper.tex."
+say "The tables are just averages of those CSV rows. This script rebuilds every table from the raw files and checks each line appears word-for-word in the paper."
+run "python3 experiments/scripts/aggregate.py"
+run "git diff --stat experiments/results/ && echo 'results/ identical to the committed tables'"
+run "python3 experiments/scripts/paper_tables.py"
 pause
 
-step "Derive the result from that raw file, live" "The paper's numbers are just this computation on the CSV — nothing hidden."
-python3 -c "
-import csv, statistics
-with open('experiments/raw/exp1_deploy_live_demo.csv') as f:
-    rows = list(csv.DictReader(f))
-vals = [float(r['wall_seconds']) for r in rows]
-print('n =', len(vals))
-print('mean =', round(statistics.mean(vals), 3), 's')
-print('stdev =', round(statistics.pstdev(vals), 3), 's')
-print()
-print('Compare to Table III in the paper: Docker mean 1.454s')
-"
-pause
-
-step "Cleanup" "Tear everything down. The freshly generated demo file is left in place as further evidence, unless you'd rather remove it."
+step "Cleanup" "Tear everything down."
 run "docker compose --profile full down"
-echo
-read -rp "Delete experiments/raw/exp1_deploy_live_demo.csv ? [y/N] " ans
-if [[ "$ans" == "y" || "$ans" == "Y" ]]; then
-    rm -f experiments/raw/exp1_deploy_live_demo.csv
-    echo "Removed."
-else
-    echo "Kept — it's genuine data either way."
-fi
-
 echo
 echo "${BOLD}${GREEN}Demo complete.${RESET}"
