@@ -70,9 +70,9 @@ Same underlying rows as Table V — these are different columns of the same
 concurrent `/cpu` stress threads and Prometheus's `app_process_cpu_percent`
 gauge (a value the app computes about itself, not cAdvisor) first reading
 ≥60% (`scripts/exp3_cpu_stress.py: query_process_cpu_percent`, polled every
-0.5s). **Note**: this file now has 60 rows (3 collection passes — see
-`reproduction_run_2026-09-10.txt`); the paper's numbers are the **first 20
-rows only**.
+0.5s). **Note**: rows 1-60 of this file are 3 collection passes (see
+`reproduction_run_2026-09-10.txt`), and any rows after 60 are short live-demo
+samples; the paper's numbers are the **first 20 rows only**.
 
 ## Prose numbers — Memory stress / OOM (Section VI.D)
 
@@ -85,8 +85,9 @@ rows only**.
 
 `oom_killed`/`restart_count` come directly from `docker inspect`'s
 `State.OOMKilled` and top-level `RestartCount` fields — kernel/Docker-set,
-not computed (`scripts/exp4_memory_stress.py: container_state`). This file
-also now has 60 rows (3 passes); paper numbers are the **first 20 rows**.
+not computed (`scripts/exp4_memory_stress.py: container_state`). Rows 1-60
+are 3 collection passes, rows after 60 are live-demo samples; paper numbers
+are the **first 20 rows**.
 
 ## Prose numbers — Failure detection & recovery (Section VI.E)
 
@@ -98,8 +99,9 @@ also now has 60 rows (3 passes); paper numbers are the **first 20 rows**.
 MTTD comes from polling Prometheus's built-in `up{job="app"}` series
 (Prometheus itself sets this to 0 on scrape failure) after a real
 `docker kill`; MTTR from polling `/health` + `up==1` after a real
-`docker start` (`scripts/exp5_failure_recovery.py`). This file also has 60
-rows (3 passes); paper numbers are the **first 20 rows**.
+`docker start` (`scripts/exp5_failure_recovery.py`). Rows 1-60 are 3
+passes, rows after 60 are live-demo samples; paper numbers are the **first 20
+rows**.
 
 ## Statistical tests (Section VI.B, VII, VIII)
 

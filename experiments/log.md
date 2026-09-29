@@ -77,3 +77,35 @@ Command: <exact command run>
 Raw output / metrics: <pasted numbers or path to raw file>
 Notes: <anything anomalous>
 ```
+
+## 2026-09-29 — Correction to the 2026-09-09 Experiment 4 entry
+The Experiment 4 entry above says run 18 "needed a second cycle" in the
+context of RestartCount. The raw row shows RestartCount=1 for run 18 like
+every other run; what differs is requests_before_failure=10 and
+time_to_oom_seconds=21.32 (vs 5 and ~11.07s for the other 19). That single
+run is why the reported time-to-OOM mean is 11.58s (std 2.23) rather than
+~11.07s. Raw data unchanged; this entry only corrects the prose.
+
+## 2026-09-29 — statistical_analysis.py: isolated-rerun slice fixed
+The original-vs-isolated CPU-stress comparison sliced `exp3[-20:]` (last 20
+rows) instead of rows 41-60, so it drifted every time a demo sample was
+appended (gave t=3.40 at the 62-row committed state, t=3.49 at 64 rows).
+Pinned to `exp3[40:60]`; output is now t=3.52, p=0.0022, d=1.11, matching
+the paper and DATA_PROVENANCE.md regardless of later appends.
+
+## 2026-09-29 — Environment check after host reinstall: Experiment 5 (10 runs)
+Host now CachyOS, kernel 7.2.6, Docker 29.8.1, Python 3.14.7 (paper data
+was collected on Arch/Omarchy, kernel 7.1.9, Docker 29.7.2).
+Command: `python3 experiments/scripts/exp5_failure_recovery.py --runs 2`,
+then `--runs 8`, both with `--out` to a scratch file.
+Raw: experiments/env_check_2026-09-29/exp5_failure_recovery.csv (kept out of
+raw/ so it never enters the paper's aggregation).
+Notes: detection mean 3.08s (std 0.24, min 2.63, max 3.60) vs the paper's
+1.15s (max 2.03); recovery 2.01s (std 0.115), unchanged. Diagnostic: after
+`docker kill` of the app, `wget http://app:8000/health` from inside the
+Prometheus container took 7.95s to fail instead of failing immediately, so
+each failed scrape now ends at Prometheus's 2s scrape timeout rather than
+instantly — consistent with the ~2s shift. Likely cause is name resolution
+of the removed container on the new host (not yet confirmed). MTTD for a
+killed container is therefore sensitive to how the failure surfaces to the
+scraper, not only to scrape_interval.

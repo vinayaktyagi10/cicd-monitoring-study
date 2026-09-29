@@ -94,7 +94,7 @@ def main():
     print(" reproduction writeup within normal sampling variance?)")
     exp3 = load_raw("exp3_cpu_stress")
     original = [float(r["detection_seconds"]) for r in exp3[:20] if r["detection_seconds"]]
-    isolated = [float(r["detection_seconds"]) for r in exp3[-20:] if r["detection_seconds"]]
+    isolated = [float(r["detection_seconds"]) for r in exp3[40:60] if r["detection_seconds"]]
     if len(original) == 20 and len(isolated) == 20:
         t, p, d = welch_t(original, isolated)
         sig = "significant (p<0.05)" if p < 0.05 else "NOT significant (p>=0.05)"

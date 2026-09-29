@@ -23,13 +23,12 @@ through that aggregation step — nothing is entered by hand.
 ## Prerequisites
 
 - Docker + Docker Compose (tested with Docker 29.7.2)
-- Python 3.12+ (standard library only for every script except the app itself)
+- Python 3.12+ (tested on 3.12 and 3.14). Every experiment script and `aggregate.py` use the standard library only; `statistical_analysis.py` needs scipy: `pip install -r experiments/requirements.txt`
 - The subject app image built once: `docker compose build app` (run from the repository root)
 - For E1's `docker_cicd` configuration only: the [`gh` CLI](https://cli.github.com/), authenticated, and push access to trigger the repository's GitHub Actions workflow
 
-No other dependencies — the load generator and stats sampler deliberately avoid
-external tools (`hey`, `wrk`) so there is nothing to install beyond Docker and
-Python.
+Beyond that, the load generator and stats sampler deliberately avoid
+external tools (`hey`, `wrk`).
 
 ## Running an experiment
 
@@ -53,6 +52,33 @@ python3 experiments/scripts/aggregate.py        # regenerate results/*_summary.c
 
 Each script tears down whatever Docker containers it started before exiting,
 so they can be run in any order without manual cleanup in between.
+
+## Reproducing the paper's numbers from raw data
+
+No Docker needed — this only reads `raw/`.
+
+```bash
+# from the repository root
+python3 experiments/scripts/aggregate.py
+git diff --stat experiments/results/     # empty = byte-identical to the committed tables
+
+python3 -m venv .venv && .venv/bin/pip install -r experiments/requirements.txt
+.venv/bin/python experiments/scripts/statistical_analysis.py
+```
+
+| Paper | Source after running the above |
+|---|---|
+| Table III (deployment time) | `results/exp1_deploy_summary.csv` — `wall_seconds_*`; Docker+CI/CD row uses `elapsed_seconds_*` |
+| Table V (resource use, latency, throughput) | `results/exp2_resource_summary.csv` — `app_cpu_mean_*`, `app_mem_mb_mean_*`, `p95_latency_ms_*`, `throughput_rps_*` |
+| Table VI (monitoring stack draw) | same file — `cadvisor_*`, `prometheus_*`, `grafana_*` columns |
+| §VI.C CPU stress MTTD | `results/exp3_cpu_stress_summary.csv` |
+| §VI.D OOM behaviour | `results/exp4_memory_stress_summary.csv` |
+| §VI.E failure MTTD / MTTR | `results/exp5_failure_recovery_summary.csv` |
+| t-tests, Wilson CI | `statistical_analysis.py` stdout |
+
+Std columns are population standard deviation (`statistics.pstdev`).
+`aggregate.py` uses only each file's original-pass rows (`ORIGINAL_PASS_ROWS`);
+`--all` includes later re-runs. Full value-by-value trace: `DATA_PROVENANCE.md`.
 
 ## Interactive demo
 
