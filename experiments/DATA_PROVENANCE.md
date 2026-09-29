@@ -20,7 +20,7 @@ numbers copied into `paper/paper.tex` tables/prose →
 |---|---|---|---|
 | Manual: 0.592 / 0.020 / 0.577 / 0.633, n=20 | `raw/exp1_deploy.csv` (rows `config=manual`) | `scripts/exp1_deploy.py --configs manual --runs 20` | `wall_seconds_{mean,std,min,max}` |
 | Docker: 1.454 / 0.107 / 1.267 / 1.581, n=20 | same file, `config=docker` | `scripts/exp1_deploy.py --configs docker --runs 20` | `wall_seconds_*` |
-| Docker+CI/CD: 50.231 / 3.816 / 44.404 / 55.362, n=8 (1 fail) | same file, `config=docker_cicd` | `scripts/exp1_deploy.py --configs docker_cicd --runs 8` (real `gh workflow run` dispatch per run) | `elapsed_seconds_*` (this column, not `wall_seconds`, is the CI+deploy combined figure — see script docstring) |
+| Docker+CI/CD: 50.231 / 3.817 / 44.404 / 55.362, n=8 (1 fail) | same file, `config=docker_cicd` | `scripts/exp1_deploy.py --configs docker_cicd --runs 8` (real `gh workflow run` dispatch per run) | `elapsed_seconds_*` (this column, not `wall_seconds`, is the CI+deploy combined figure — see script docstring) |
 | Full pipeline: 1.552 / 0.031 / 1.485 / 1.636, n=20 | same file, `config=full_pipeline` | `scripts/exp1_deploy.py --configs full_pipeline --runs 20` | `wall_seconds_*` |
 
 Computed by: `scripts/aggregate.py` (plain `statistics.mean` /

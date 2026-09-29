@@ -18,6 +18,7 @@ through that aggregation step — nothing is entered by hand.
 | `scripts/exp5_failure_recovery.py` | E5 & E6 — failure detection & recovery | Time for Prometheus to detect a killed container, and time to recover after restart. Both phases live in one script because they are two halves of the same run (kill, then restart, in sequence) — splitting them would mean re-deriving the failure state twice. |
 | `scripts/loadgen.py` | — | Standalone concurrent HTTP load generator (used inside E2 and available to run independently) |
 | `scripts/stats_sampler.py` | — | Standalone `docker stats` poller (used inside E2 and available to run independently) |
+| `scripts/paper_tables.py` | — | Recomputes every table/prose number from `raw/` in the paper's layout and checks each line appears verbatim in `paper.tex` |
 | `scripts/aggregate.py` | — | Reads every CSV in `raw/`, computes mean/std/min/max grouped by configuration, writes `results/*_summary.csv` |
 
 ## Prerequisites
@@ -61,6 +62,7 @@ No Docker needed — this only reads `raw/`.
 # from the repository root
 python3 experiments/scripts/aggregate.py
 git diff --stat experiments/results/     # empty = byte-identical to the committed tables
+python3 experiments/scripts/paper_tables.py   # prints Tables III/V/VI + §VI numbers, checks each against paper.tex
 
 python3 -m venv .venv && .venv/bin/pip install -r experiments/requirements.txt
 .venv/bin/python experiments/scripts/statistical_analysis.py

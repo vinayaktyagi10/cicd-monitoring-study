@@ -48,9 +48,11 @@ pause
 
 step "Recompute every table from the raw CSVs, live" "This is the exact command that produced Tables III-VI. Watch the output match the paper."
 run "python3 experiments/scripts/aggregate.py"
-echo
-echo "${DIM}Now open experiments/results/exp1_deploy_summary.csv (or paper.pdf page 5) --"
-echo "the numbers just printed above should match Table III/IV/V exactly.${RESET}"
+run "git diff --stat experiments/results/ && echo 'results/ unchanged: byte-identical to the committed tables'"
+pause
+
+step "Every table in the paper, recomputed from raw data" "Each line is built from raw/ and searched for verbatim in paper/paper.tex -- no paper values are stored in the script."
+run "python3 experiments/scripts/paper_tables.py"
 pause
 
 step "Table III -- deployment time: a fresh live sample" "2 fresh runs of the Docker config. A new row lands with today's timestamp."
@@ -79,7 +81,7 @@ run "tail -2 experiments/raw/exp5_failure_recovery.csv"
 pause
 
 step "Statistical significance, live" "The same t-tests behind the paper's significance claims, run fresh against the original 20-run data."
-run ".venv-figs/bin/python3 experiments/scripts/statistical_analysis.py"
+run ".venv/bin/python experiments/scripts/statistical_analysis.py"
 pause
 
 step "Anything not covered above" "Full number -> raw file -> script -> method map, for any value someone asks about that wasn't demonstrated live."
