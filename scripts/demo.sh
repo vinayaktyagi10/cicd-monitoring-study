@@ -8,7 +8,6 @@ BOLD=$(tput bold 2>/dev/null || echo "")
 DIM=$(tput dim 2>/dev/null || echo "")
 GREEN=$(tput setaf 2 2>/dev/null || echo "")
 YELLOW=$(tput setaf 3 2>/dev/null || echo "")
-CYAN=$(tput setaf 6 2>/dev/null || echo "")
 RESET=$(tput sgr0 2>/dev/null || echo "")
 
 STEP_NUM=0
@@ -24,11 +23,6 @@ step() {
     clear
     echo "${BOLD}${GREEN}=== Step ${STEP_NUM}: $1 ===${RESET}"
     echo "${DIM}$2${RESET}"
-    echo
-}
-
-say() {
-    echo "${CYAN}Tell him:${RESET} $*"
     echo
 }
 
@@ -69,21 +63,18 @@ wait_healthy() {
 # ---------------------------------------------------------------------------
 
 step "Repo identity" "A real, pushed repository with its full history."
-say "Everything is on GitHub with the full commit history -- code, raw data, analysis scripts and the paper."
 run "git remote -v"
 run "git log --oneline | head -15"
 run 'git log -1 --format="Last commit: %ai"'
 pause
 
 step "The machine" "Same hardware as Table II. The OS was reinstalled after data collection."
-say "Same laptop the data was collected on. The paper's Table II lists the OS/Docker versions at collection time; the OS has since been reinstalled, and that's logged in experiments/log.md."
 run "lscpu | grep -E 'Model name|^CPU\(s\):|Thread|Core'"
 run "free -h"
 run "docker --version"
 pause
 
 step "Start the full pipeline" "App + cAdvisor + Prometheus + Grafana, all as Docker containers from one docker-compose.yml."
-say "One command starts four containers: my app, cAdvisor which measures containers, Prometheus which collects the numbers, and Grafana which draws them."
 run "docker compose --profile full up -d"
 wait_healthy
 sleep 3
@@ -91,7 +82,6 @@ run "docker compose --profile full ps --format 'table {{.Name}}\t{{.Status}}\t{{
 pause
 
 step "1/5  The application" "A small FastAPI service with a cheap route, a CPU-heavy route and a memory-heavy route."
-say "This is the thing being measured. /health is cheap, /cpu burns CPU, /memory allocates RAM -- those are the levers the stress experiments pull. /metrics is where the app reports its own numbers."
 run "curl -s localhost:8000/health; echo"
 run "curl -s 'localhost:8000/cpu?iterations=500000'; echo"
 run "curl -s 'localhost:8000/memory?mb=5'; echo"
@@ -99,30 +89,25 @@ show "http://localhost:8000/metrics" "app_requests_total, app_process_cpu_percen
 pause
 
 step "2/5  cAdvisor" "Measures CPU/memory of every container from outside, via the kernel's cgroups."
-say "cAdvisor watches every container from the outside -- it's how the paper measures what the monitoring stack itself costs (Table VI)."
 show "http://localhost:8080/docker/" "the list of running containers; click one to see its live CPU and memory graphs"
 pause
 
 step "3/5  Prometheus - what it scrapes" "Prometheus pulls /metrics from each target every 2 seconds and stores the time series."
-say "Every 2 seconds Prometheus visits each target and records its numbers. All three targets are UP."
 run "curl -s localhost:9090/api/v1/targets | python3 -c \"import json,sys; [print(t['labels']['job'].ljust(12), t['health']) for t in json.load(sys.stdin)['data']['activeTargets']]\""
 show "http://localhost:9090/targets" "app, cadvisor and prometheus all green / UP, with 'last scrape' ticking"
 pause
 
 step "4/5  Prometheus - live query" "Generating background traffic now so the graphs move."
-say "This is the query the CPU-stress experiment uses: the app's own CPU%. I'm sending traffic now, so you can see it rise."
 start_load
 show "http://localhost:9090/graph?g0.expr=app_process_cpu_percent&g0.tab=0&g0.range_input=5m" "the CPU line climbing as the traffic starts"
 pause
 
 step "5/5  Grafana dashboard" "Auto-provisioned from monitoring/grafana/provisioning -- no manual setup."
-say "Grafana draws the same Prometheus data as a dashboard: request rate, latency, CPU, memory, and whether the app is up."
 show "http://localhost:3000/d/cicd-monitoring-study-app?refresh=5s&from=now-5m&to=now" "request-rate and CPU panels moving under the live traffic; 'Target up/down' at 1"
 pause
 stop_load
 
 step "Live failure: what Experiment 5 measures" "Kill the app container and watch monitoring notice, then bring it back."
-say "Now I crash the app on purpose. Prometheus's next scrape fails, the up signal drops to 0, and the dashboard shows it. The time from crash to that 0 is the MTTD in the paper; the time to healthy again is MTTR."
 show "http://localhost:9090/targets" "keep this tab and the Grafana tab side by side"
 pause
 run "docker kill cicd-monitoring-study-app-1"
@@ -138,7 +123,6 @@ echo "${GREEN}App healthy again after $(python3 -c "print(round($(date +%s.%N) -
 pause
 
 step "CI/CD (real GitHub Actions)" "Optional: triggers a real workflow run (test -> docker build -> push). ~45-65s, uses Actions minutes."
-say "Every push runs tests and builds the Docker image on GitHub's servers. The paper's Docker+CI/CD deploy time is this, end to end."
 read -rp "Run this step? [Y/n] " gha_ans
 if [[ "$gha_ans" == "n" || "$gha_ans" == "N" ]]; then
     echo "${DIM}Skipped.${RESET}"
@@ -154,14 +138,12 @@ fi
 pause
 
 step "From experiment to raw data" "Each experiment script does the thing above 20 times and writes one CSV row per run."
-say "Each experiment script automates exactly what we just did by hand, 20 times, and writes one line per run into a CSV. Those files are never edited by hand."
 run "ls experiments/scripts/"
 run "head -6 experiments/raw/exp5_failure_recovery.csv"
 run "wc -l experiments/raw/*.csv"
 pause
 
 step "From raw data to the paper's tables" "aggregate.py averages the raw rows; paper_tables.py rebuilds every table and checks it against paper.tex."
-say "The tables are just averages of those CSV rows. This script rebuilds every table from the raw files and checks each line appears word-for-word in the paper."
 run "python3 experiments/scripts/aggregate.py"
 run "git diff --stat experiments/results/ && echo 'results/ identical to the committed tables'"
 run "python3 experiments/scripts/paper_tables.py"
