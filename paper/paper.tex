@@ -40,8 +40,8 @@ across three cases, CPU-stress detection, memory-stress/OOM behaviour, and
 failure detection/recovery), we find that: containerized deployment adds
 roughly 0.86s of fixed overhead over a raw process start (1.45s vs 0.59s
 mean); a CI/CD-automated deployment is reliable (7/8 successful triggers) but
-two orders of magnitude slower end-to-end (50.2s mean) than a pre-built local
-deploy, because it re-pays the full build+test cost every run; a Prometheus
+roughly 35$\times$ slower end-to-end (50.2s vs.\ 1.45s mean) than a pre-built
+local Docker deploy, because it re-pays the full build+test cost every run; a Prometheus
 scrape loop detects induced CPU saturation in 5.65s mean (20/20 runs) and
 kernel-level container failure in 1.15s mean (20/20 runs), both bounded below
 by the 2s scrape interval; and, counter-intuitively, the monitored
@@ -414,8 +414,8 @@ Containerizing a fixed local image adds a consistent $\approx$0.86s of fixed
 overhead over a raw process start (1.454s vs.\ 0.592s mean); adding the full
 monitoring stack on top of Docker adds a further $\approx$0.10s
 (1.552s vs.\ 1.454s mean) since Compose brings up four containers rather than
-one but all four start in parallel. The CI/CD-automated path is two orders
-of magnitude slower (50.2s mean) because it re-pays the full test-then-build
+one but all four start in parallel. The CI/CD-automated path is roughly
+35$\times$ slower (50.2s vs.\ 1.454s mean) because it re-pays the full test-then-build
 cost on every deployment rather than reusing a pre-built image --- this is
 the direct cost of automation, traded against the reliability and
 repeatability of not requiring a human to run the equivalent commands by
@@ -452,7 +452,7 @@ than reusing a pre-built image.}
 \end{figure}
 
 Fig.~\ref{fig:deploytime} visualizes Table~\ref{tab:deploy} on a log scale,
-since the CI/CD configuration is roughly two orders of magnitude slower than
+since the CI/CD configuration is roughly 30--85$\times$ slower than
 the other three and would otherwise flatten them to indistinguishable bars.
 
 \subsection{Resource utilization, throughput, and monitoring overhead (RQ1, RQ3)}
@@ -661,7 +661,7 @@ time in isolation.
 Prometheus reliably (20/20 in both experiments) detects both an induced CPU
 saturation event (mean 5.65s) and an induced process failure (mean 1.15s),
 with detection latency in both cases bounded below by the 2s scrape
-interval. The two-orders-of-magnitude difference between them (5.65s vs.\
+interval. The roughly 5$\times$ difference between them (5.65s vs.\
 1.15s) is itself informative: a binary up/down signal is detected almost as
 fast as the scrape loop allows, while a gradual resource-saturation signal
 takes longer because it must accumulate enough samples above threshold amid
