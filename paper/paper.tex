@@ -123,7 +123,8 @@ fault conditions.
 \section{Related Work}
 
 Table~\ref{tab:related} summarizes the studies most directly relevant to this
-work's three pillars. This is a seed set assembled from a targeted IEEE
+work's three pillars. This is a seed set, extended with four further works found by
+targeted web searches, assembled from a targeted IEEE
 Xplore search (queries: \emph{Docker container performance overhead
 benchmark}; \emph{containerized CI/CD pipeline performance evaluation};
 \emph{Prometheus Grafana monitoring microservices}) rather than an
@@ -177,12 +178,30 @@ configuration where feasible & --- \\
 \end{tabular}
 \end{table*}
 
-Beyond these four, the search surfaced further candidates not yet reviewed in
-depth: an integrated CI/CD-pipeline study~\cite{kumar2024}, a DevOps
-security-first CI/CD framework~\cite{ashtagi2025}, and an AWS/Kubernetes
-Prometheus--Grafana deployment study~\cite{abirami2023}. These are listed for
-completeness and should be incorporated into a full related-work pass before
-this paper is submitted.
+Three further works bear directly on individual pillars. Dinga et
+al.~\cite{dinga2023} empirically evaluate the energy and performance overhead
+of four monitoring tools, Prometheus among them, on Docker-based systems and
+report that the overhead depends on the tool and on the frequency and workload
+conditions; this is the closest prior work on monitoring overhead, but it
+isolates the monitoring tools and does not combine them with a CI/CD pipeline
+or fault injection. Our Experiment~6, which measures the monitoring
+containers' CPU from kernel counters, is complementary: it found
+$\approx$0.03 cores for cAdvisor, Prometheus and Grafana together on this host,
+which is compatible with a tool-dependent overhead but is a single
+configuration and not a comparison across tools. Hilton et
+al.~\cite{hilton2016} study the usage, costs and benefits of continuous
+integration across 34{,}544 open-source GitHub projects, which motivates
+measuring the cost of the CI step itself, as the Docker+CI/CD arm does.
+Forsgren, Humble and Kim~\cite{forsgren2018} establish time-to-restore and
+change-failure rate as standard software-delivery performance measures; our
+MTTD and MTTR are the container-level analogues, measured in seconds on a
+single service rather than as organization-level outcomes. Container
+background is covered by Bernstein~\cite{bernstein2014}. Three further
+candidates found in the search --- an integrated CI/CD-pipeline
+study~\cite{kumar2024}, a DevOps security-first CI/CD
+framework~\cite{ashtagi2025}, and an AWS/Kubernetes Prometheus--Grafana
+deployment study~\cite{abirami2023} --- have been identified but not reviewed
+in depth.
 
 \subsection{Research Gap}
 Existing studies frequently evaluate CI/CD automation, containerization, or
@@ -805,12 +824,15 @@ machine with no isolation from other host activity beyond what Docker itself
 provides; absolute timing figures (especially the sub-2s deployment times)
 should be read as relative comparisons between configurations on this host,
 not as portable absolute benchmarks.
-\item \textbf{Related work is a seed set.} Section II's four fully-reviewed
-papers and three title-only candidates were found via a small number of
-targeted IEEE Xplore queries, not a systematic multi-database review; a
-submission-ready version of this paper should expand this section
-substantially, including non-IEEE venues (ACM, Springer, USENIX) before
-finalizing the research-gap claim.
+\item \textbf{Related work is still not a systematic review.} Section II's
+four tabulated papers came from a small number of targeted IEEE Xplore
+queries; four further works (monitoring overhead, CI usage, delivery
+performance, container background) were added from targeted web searches, and
+three more candidates are listed but not reviewed in depth. No multi-database
+protocol (ACM, Springer, USENIX, inclusion criteria, screening) was followed,
+so the research-gap claim --- that few studies combine all three pillars with
+controlled quantitative baselines --- rests on this limited search and should
+be re-checked against a systematic review before submission.
 \item \textbf{Detection thresholds are fixed, not tuned.} The 60\%
 CPU-percent threshold (Experiment 3) and the memory container limit (150\,MB,
 Experiment 4) were chosen to make the induced condition reliably observable
