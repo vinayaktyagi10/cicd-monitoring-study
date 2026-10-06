@@ -644,10 +644,14 @@ Fig.~\ref{fig:cpuutil}.}
 \label{fig:overhead}
 \end{figure}
 
-\subsection{Same-host replication}
+\subsection{Same-hardware replication}
 \label{sec:replication}
-Experiments 1--5 were repeated with the unmodified scripts on the same machine
-on a later date (20 runs per configuration), writing to a separate directory so
+Experiments 1--5 were repeated with the unmodified scripts on the same
+hardware on a later date (20 runs per configuration), but on a freshly
+installed operating system (CachyOS, kernel 7.2.9, Docker 29.8.2) in place of
+the Arch/Omarchy 7.1.9 installation of Table~\ref{tab:env}, so this tests
+robustness to the software environment rather than to run-to-run noise alone.
+Results were written to a separate directory so
 the data behind Tables~III--VI is untouched. Table~\ref{tab:replication} gives
 the original and replication means with 95\% confidence intervals
 (\texttt{validate.py}); a metric is marked \emph{consistent} only if the
@@ -662,7 +666,7 @@ reported as a robustness check, not as a replacement.
 
 \begin{table*}[t]
 \centering
-\caption{Original vs.\ same-host replication (20 runs each). Intervals are
+\caption{Original vs.\ same-hardware replication on a reinstalled OS (20 runs each). Intervals are
 $t$-based 95\% CIs on the mean (sample SD); $\Delta$\% is replication relative
 to original. The Experiment~4 rows are from the unmodified zero-filled script
 (0/20 OOM kills, see Section~\ref{sec:limitations}); the non-zero-fill variant
@@ -730,9 +734,11 @@ tightly.
 \label{sec:limitations}
 
 \begin{itemize}
-\item \textbf{Replication on the same host did not reproduce most absolute
-numbers.} Re-running Experiments 1--5 with the unmodified scripts on the same
-machine on a later date (20 runs each, new kernel, performance power profile)
+\item \textbf{Replication on the same hardware did not reproduce most
+absolute numbers.} Re-running Experiments 1--5 with the unmodified scripts on
+the same machine after the operating system was reinstalled (CachyOS, kernel
+7.2.9, Docker 29.8.2, replacing Arch/Omarchy 7.1.9; performance power profile;
+20 runs each)
 (Table~\ref{tab:replication}) gave deployment times 12--29\% faster, throughput about 48\% higher, CPU-stress
 detection of 2.41s rather than 5.65s and failure detection of 3.14s rather
 than 1.15s, with the mean outside the original 95\% interval for most metrics.
@@ -745,7 +751,7 @@ original 7/8. The
 deployment ordering (manual, then Docker, then full pipeline) was preserved,
 but the throughput ordering across monitoring cases was not (4041, 3996 and
 4033\,req/s for Docker, +Prometheus and +Grafana); absolute values are
-specific to one host state on one day.
+specific to one software environment.
 \item \textbf{The CPU-contention explanation is not supported.} Experiment~2's
 application CPU\% is bimodal because its $\approx$0.11s load window is sampled
 by a longer \texttt{docker stats} interval, so the reported fall with
@@ -768,8 +774,12 @@ OOM-killed even though 16 requests ($\approx$320\,MB) succeeded against a
 mean 5.0 requests with peak memory 136.4\,MB, matching the original
 result (5.25 requests, 135.5\,MB). The OOM finding therefore holds when the
 memory is genuinely resident; the original zero-filled variant is kernel
-dependent. We did not establish whether the original 2026-09 run differed from
-the replication in THP settings or kernel.
+dependent. The original run was on a different distribution and kernel
+(Arch 7.1.9 vs.\ CachyOS 7.2.9); the replication host has transparent
+hugepages set to \texttt{always}. We did not record the original host's THP
+setting and the original installation no longer exists, so we cannot confirm
+that this setting is what differed; the distribution default being
+\texttt{madvise} is a plausible but untested explanation.
 \item \textbf{cAdvisor container-label resolution.} This host's Docker uses
 the containerd-snapshotter storage driver rather than classic overlay2,
 which cAdvisor v0.49.1 cannot resolve container name/image labels against.
