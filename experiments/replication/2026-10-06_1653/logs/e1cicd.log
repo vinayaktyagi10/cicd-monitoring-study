@@ -1,0 +1,9 @@
+[docker_cicd] run 1/8 success=True elapsed=40.40352406099555
+[docker_cicd] run 2/8 success=True elapsed=46.46504719500081
+[docker_cicd] run 3/8 success=True elapsed=56.65266019300179
+[docker_cicd] run 4/8 success=True elapsed=43.64778597300028
+[docker_cicd] run 5/8 success=True elapsed=45.77328588400269
+[docker_cicd] run 6/8 success=True elapsed=51.709667950999574
+[docker_cicd] run 7/8 success=True elapsed=50.56117238900333
+[docker_cicd] run 8/8 success=True elapsed=53.592212972995185
+appended 8 rows to /home/vinayak/Research/cicd-monitoring-study/experiments/replication/2026-10-06_1653/raw/exp1_deploy.csv

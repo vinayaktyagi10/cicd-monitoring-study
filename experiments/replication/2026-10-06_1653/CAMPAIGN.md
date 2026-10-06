@@ -37,3 +37,14 @@ Command: `/home/vinayak/Research/cicd-monitoring-study/.venv/bin/python /home/vi
 Exit code: 0, duration 24.4 min, background CPU before start 0.05 cores
 Log: logs/e6x4.log
 
+## 2026-10-06T23:47:23+05:30 - e1cicd: NOT RUN
+Preconditions failed: background CPU 0.79 cores > --max-busy-cores 0.5
+
+## 2026-10-06T23:47:47+05:30 - e1cicd: NOT RUN
+Preconditions failed: background CPU 0.80 cores > --max-busy-cores 0.5
+
+## 2026-10-06T23:55:45+05:30 - e1cicd
+Command: `/home/vinayak/Research/cicd-monitoring-study/.venv/bin/python /home/vinayak/Research/cicd-monitoring-study/experiments/scripts/exp1_deploy.py --configs docker_cicd --runs 8 --out /home/vinayak/Research/cicd-monitoring-study/experiments/replication/2026-10-06_1653/raw/exp1_deploy.csv`
+Exit code: 0, duration 8.4 min, background CPU before start 0.18 cores
+Log: logs/e1cicd.log
+

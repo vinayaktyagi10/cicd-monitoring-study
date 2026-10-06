@@ -166,3 +166,9 @@ Notes:
 - E4 with --fill (non-zero byte per page): 20/20 OOM-killed, 5.0 requests, peak 136.4MB, time-to-OOM 11.06s -- matches the original.
 - Not established: whether the original 2026-09 run differed in kernel/THP settings. shrink_underused could not be toggled directly (needs root).
 - E6: monitoring containers ~0.03 cores; no throughput contrast vs Docker-only excludes zero; pinning test inconclusive; throughput varied ~3x run to run and tracked host load (r=-0.98).
+
+## 2026-10-06T23:55:45+05:30 - Replication campaign 2026-10-06_1653, step e1cicd
+Command: `/home/vinayak/Research/cicd-monitoring-study/.venv/bin/python /home/vinayak/Research/cicd-monitoring-study/experiments/scripts/exp1_deploy.py --configs docker_cicd --runs 8 --out /home/vinayak/Research/cicd-monitoring-study/experiments/replication/2026-10-06_1653/raw/exp1_deploy.csv`
+Raw: experiments/replication/2026-10-06_1653/raw/ ; log: experiments/replication/2026-10-06_1653/logs/e1cicd.log ; host snapshot: experiments/replication/2026-10-06_1653/meta/e1cicd_before.json
+Notes: exit code 0, 8.4 min, background CPU 0.18 cores at start (written automatically by campaign.py).
+Note: the first e1cicd attempts at 23:47 were refused by the background-CPU precondition (0.79-0.80 cores > 0.5, Zen browser) and recorded as NOT RUN in CAMPAIGN.md. A second attempt at --max-busy-cores 1.0 was stopped after a few GitHub runs, before any row was written, and its partial work discarded. The reported result is the run above, started after closing the browser, under the default 0.5-core limit. Result: 8/8 successful, mean 48.6s (original 50.2s, CONSISTENT).

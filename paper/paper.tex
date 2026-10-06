@@ -653,8 +653,9 @@ the original and replication means with 95\% confidence intervals
 (\texttt{validate.py}); a metric is marked \emph{consistent} only if the
 original mean lies inside the replication's interval. Most absolute values
 moved well outside the original intervals, while the relative structure that
-the research questions rely on held for deployment ordering, MTTR and peak CPU
-under stress (Section~\ref{sec:limitations} lists what did not reproduce and
+the research questions rely on held for deployment ordering (including the
+Docker+CI/CD arm, 8 real GitHub Actions runs, which replicated within its
+original interval), MTTR and peak CPU under stress (Section~\ref{sec:limitations} lists what did not reproduce and
 why). The original run remains the paper's reported dataset because it was the
 pre-planned measurement and every table is derived from it; the replication is
 reported as a robustness check, not as a replacement.
@@ -735,8 +736,12 @@ machine on a later date (20 runs each, new kernel, performance power profile)
 (Table~\ref{tab:replication}) gave deployment times 12--29\% faster, throughput about 48\% higher, CPU-stress
 detection of 2.41s rather than 5.65s and failure detection of 3.14s rather
 than 1.15s, with the mean outside the original 95\% interval for most metrics.
-Only MTTR, peak CPU under stress, the Prometheus/Grafana CPU figures and the
-application CPU\% in the +Prometheus and +Grafana cases stayed consistent. The
+Only the Docker+CI/CD deployment time (48.6\,s vs.\ 50.2\,s; 8/8 real
+GitHub Actions runs succeeded vs.\ 7/8 originally), MTTR, peak CPU under
+stress, the Prometheus/Grafana CPU figures and the application CPU\% in the
++Prometheus and +Grafana cases stayed consistent; the replication success rate
+has a 95\% Wilson interval of [0.68, 1.00], so it does not contradict the
+original 7/8. The
 deployment ordering (manual, then Docker, then full pipeline) was preserved,
 but the throughput ordering across monitoring cases was not (4041, 3996 and
 4033\,req/s for Docker, +Prometheus and +Grafana); absolute values are
