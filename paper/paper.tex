@@ -644,6 +644,33 @@ Fig.~\ref{fig:cpuutil}.}
 \label{fig:overhead}
 \end{figure}
 
+\subsection{Same-host replication}
+\label{sec:replication}
+Experiments 1--5 were repeated with the unmodified scripts on the same machine
+on a later date (20 runs per configuration), writing to a separate directory so
+the data behind Tables~III--VI is untouched. Table~\ref{tab:replication} gives
+the original and replication means with 95\% confidence intervals
+(\texttt{validate.py}); a metric is marked \emph{consistent} only if the
+original mean lies inside the replication's interval. Most absolute values
+moved well outside the original intervals, while the relative structure that
+the research questions rely on held for deployment ordering, MTTR and peak CPU
+under stress (Section~\ref{sec:limitations} lists what did not reproduce and
+why). The original run remains the paper's reported dataset because it was the
+pre-planned measurement and every table is derived from it; the replication is
+reported as a robustness check, not as a replacement.
+
+\begin{table*}[t]
+\centering
+\caption{Original vs.\ same-host replication (20 runs each). Intervals are
+$t$-based 95\% CIs on the mean (sample SD); $\Delta$\% is replication relative
+to original. The Experiment~4 rows are from the unmodified zero-filled script
+(0/20 OOM kills, see Section~\ref{sec:limitations}); the non-zero-fill variant
+reproduced the original. Generated from \texttt{results/original\_vs\_replication.csv}.}
+\label{tab:replication}
+\scriptsize
+\input{tables/replication}
+\end{table*}
+
 \section{Discussion}
 
 Taken together, these results answer the four research questions as follows.
@@ -705,7 +732,7 @@ tightly.
 \item \textbf{Replication on the same host did not reproduce most absolute
 numbers.} Re-running Experiments 1--5 with the unmodified scripts on the same
 machine on a later date (20 runs each, new kernel, performance power profile)
-gave deployment times 12--29\% faster, throughput about 48\% higher, CPU-stress
+(Table~\ref{tab:replication}) gave deployment times 12--29\% faster, throughput about 48\% higher, CPU-stress
 detection of 2.41s rather than 5.65s and failure detection of 3.14s rather
 than 1.15s, with the mean outside the original 95\% interval for most metrics.
 Only MTTR, peak CPU under stress, the Prometheus/Grafana CPU figures and the

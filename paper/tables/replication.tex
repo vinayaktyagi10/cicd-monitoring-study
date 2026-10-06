@@ -1,0 +1,34 @@
+\begin{tabular}{lllrl}
+\toprule
+Metric & Original mean [95\% CI] & Replication mean [95\% CI] & $\Delta$\% & Verdict \\
+\midrule
+Deploy time, manual (s) & 0.59 [0.58, 0.60] & 0.42 [0.41, 0.43] & $-28.9$ & different \\
+Deploy time, Docker (s) & 1.45 [1.40, 1.50] & 1.05 [1.04, 1.06] & $-27.7$ & different \\
+Deploy time, full pipeline (s) & 1.55 [1.54, 1.57] & 1.37 [1.31, 1.43] & $-11.8$ & different \\
+Deploy time, Docker+CI/CD (s) & --- & --- & --- & not run \\
+Throughput, Docker (req/s) & 2737.07 [2638.29, 2835.84] & 4040.66 [3984.28, 4097.04] & $+47.6$ & different \\
+Throughput, +Prometheus (req/s) & 2640.65 [2532.08, 2749.23] & 3995.78 [3944.85, 4046.70] & $+51.3$ & different \\
+Throughput, +Grafana (req/s) & 2448.85 [2311.85, 2585.84] & 4033.22 [3995.02, 4071.43] & $+64.7$ & different \\
+p95 latency, Docker (ms) & 5.23 [4.75, 5.70] & 3.16 [2.96, 3.36] & $-39.5$ & different \\
+p95 latency, +Prometheus (ms) & 5.34 [4.95, 5.72] & 3.14 [3.03, 3.25] & $-41.2$ & different \\
+p95 latency, +Grafana (ms) & 5.51 [5.09, 5.92] & 3.03 [2.97, 3.08] & $-45.1$ & different \\
+App CPU\%, Docker & 11.02 [9.47, 12.56] & 7.42 [6.37, 8.46] & $-32.7$ & different \\
+App CPU\%, +Prometheus & 3.76 [1.64, 5.88] & 3.50 [1.81, 5.18] & $-7.1$ & consistent \\
+App CPU\%, +Grafana & 1.79 [0.29, 3.28] & 1.91 [0.65, 3.16] & $+6.6$ & consistent \\
+App mem, Docker (MB) & 36.11 [35.91, 36.31] & 37.66 [37.49, 37.82] & $+4.3$ & different \\
+App mem, +Prometheus (MB) & 35.68 [35.47, 35.88] & 37.74 [37.50, 37.98] & $+5.8$ & different \\
+App mem, +Grafana (MB) & 35.79 [35.32, 36.25] & 37.72 [37.49, 37.95] & $+5.4$ & different \\
+cAdvisor CPU\%, +Prometheus & 6.12 [4.58, 7.67] & 2.41 [1.80, 3.02] & $-60.7$ & different \\
+cAdvisor CPU\%, +Grafana & 6.40 [4.98, 7.82] & 2.19 [1.60, 2.78] & $-65.8$ & different \\
+Prometheus CPU\%, +Prometheus & 0.78 [0.40, 1.16] & 0.62 [0.26, 0.98] & $-20.4$ & consistent \\
+Prometheus CPU\%, +Grafana & 0.80 [0.47, 1.13] & 0.51 [0.18, 0.84] & $-36.1$ & consistent \\
+Grafana CPU\%, +Grafana & 0.06 [0.01, 0.11] & 0.05 [0.03, 0.07] & $-22.5$ & consistent \\
+CPU-stress MTTD (s) & 5.65 [3.88, 7.42] & 2.41 [2.07, 2.75] & $-57.3$ & different \\
+CPU-stress peak CPU\% & 96.59 [91.79, 101.39] & 95.13 [89.69, 100.57] & $-1.5$ & consistent \\
+Time to OOM (s) & --- & --- & --- & not run \\
+Peak memory (MB) & 135.54 [135.46, 135.62] & 138.59 [137.53, 139.65] & $+2.3$ & different \\
+Requests before OOM & 5.25 [4.73, 5.77] & 16.00 [16.00, 16.00] & $+204.8$ & different \\
+Failure MTTD (s) & 1.15 [1.05, 1.25] & 3.14 [3.07, 3.20] & $+172.9$ & different \\
+MTTR (s) & 1.99 [1.99, 2.00] & 1.98 [1.94, 2.02] & $-0.7$ & consistent \\
+\bottomrule
+\end{tabular}

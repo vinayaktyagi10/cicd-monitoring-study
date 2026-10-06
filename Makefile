@@ -58,6 +58,7 @@ campaign-cicd: venv
 
 validate-campaign: venv
 	cd $(SCRIPTS) && ../../$(PY) validate.py --campaign ../../$(CAMPAIGN)
+	$(PY) $(SCRIPTS)/replication_table.py $(CAMPAIGN)/results/original_vs_replication.csv paper/tables/replication.tex
 	$(PY) $(SCRIPTS)/analyze_overhead.py $(CAMPAIGN)/raw/exp6_overhead.csv
 	@if [ -f $(CAMPAIGN)/raw/exp6_overhead_loadgen4.csv ]; then \
 	  $(PY) $(SCRIPTS)/analyze_overhead.py $(CAMPAIGN)/raw/exp6_overhead_loadgen4.csv \
