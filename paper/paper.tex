@@ -50,7 +50,9 @@ monitoring containers are added (11.0\% $\to$ 3.8\% $\to$ 1.8\% mean, Docker
 $\to$ +Prometheus $\to$ +Grafana) even as end-to-end throughput drops
 (2737 $\to$ 2641 $\to$ 2449 req/s), consistent with host-level CPU contention
 between the monitoring stack and the application rather than monitoring
-instrumentation overhead inside the application itself. All raw per-run
+instrumentation overhead inside the application itself; a later
+replication, however, shows this CPU trend to be largely a sampling artifact
+and finds no measurable monitoring overhead (Section~\ref{sec:limitations}). All raw per-run
 measurements and analysis scripts underlying these results are published at
 \url{https://github.com/vinayaktyagi10/cicd-monitoring-study}.
 \end{abstract}
@@ -483,12 +485,14 @@ not distinguishable from noise at this sample size. As cAdvisor,
 Prometheus, and Grafana compete for the same physical cores, the application
 container is scheduled less rather than working harder, so its own
 \texttt{docker stats} CPU reading drops even as end-to-end throughput
-degrades. This is a genuine, non-obvious finding for RQ3:
-monitoring overhead in this design shows up primarily as
-\emph{host-level contention affecting the monitored workload}, not as
-instrumentation cost inside the monitored process itself (the
+degrades. This contention reading is a hypothesis, not an established finding: the
+load window is only $\approx$0.11s, and the \texttt{docker stats} reading
+covers a longer interval, so many runs read as idle (0/20, 12/20 and 16/20
+runs below 1\% CPU for Docker, +Prometheus and +Grafana) while non-idle runs
+read $\approx$8--11\% in every case; a follow-up measurement from kernel
+counters did not support it (Section~\ref{sec:limitations}). The
 \texttt{prometheus\_client} counters/histograms/gauges add negligible
-per-request work, as expected).
+per-request work, as expected.
 
 \begin{table}[t]
 \centering
@@ -669,15 +673,16 @@ scheduling noise --- a distinction a purely qualitative evaluation such as
 Ekanayaka et al.'s pass/fail test scenarios~\cite{ekanayaka2023} cannot
 surface.
 
-\textbf{RQ3 (monitoring overhead).} The overhead is real but structurally
-different from what is typically reported: rather than the monitored
-application paying an instrumentation tax, the monitoring stack's own
-containers (principally cAdvisor at $\approx$6\% CPU) compete with the
-application for the same fixed core budget, degrading end-to-end throughput
-(--10.5\% Docker$\to$+Grafana) while the application's own measured CPU\%
-paradoxically falls. This host-contention framing, rather than a simple
-"monitoring costs X\% CPU" framing, is the paper's most novel empirical
-contribution and directly addresses the stated research gap.
+\textbf{RQ3 (monitoring overhead).} In the original
+run the overhead appeared structurally different from what is typically
+reported: the monitoring stack's own containers (principally cAdvisor at
+$\approx$6\% CPU) appeared to compete with the application for the same fixed
+core budget, degrading end-to-end throughput (--10.5\% Docker$\to$+Grafana)
+while the application's own measured CPU\% fell. A later controlled
+re-measurement (Section~\ref{sec:limitations}) did not confirm this: the
+monitoring containers drew $\approx$0.03 cores in total and no throughput
+contrast against Docker-only was distinguishable from zero, so the
+contention framing should be treated as unconfirmed.
 
 \textbf{RQ4 (does automated CI/CD plus monitoring improve reliability).}
 The evidence here is mixed and should be stated honestly: CI/CD automation
@@ -697,6 +702,42 @@ tightly.
 \label{sec:limitations}
 
 \begin{itemize}
+\item \textbf{Replication on the same host did not reproduce most absolute
+numbers.} Re-running Experiments 1--5 with the unmodified scripts on the same
+machine on a later date (20 runs each, new kernel, performance power profile)
+gave deployment times 12--29\% faster, throughput about 48\% higher, CPU-stress
+detection of 2.41s rather than 5.65s and failure detection of 3.14s rather
+than 1.15s, with the mean outside the original 95\% interval for most metrics.
+Only MTTR, peak CPU under stress, the Prometheus/Grafana CPU figures and the
+application CPU\% in the +Prometheus and +Grafana cases stayed consistent. The
+deployment ordering (manual, then Docker, then full pipeline) was preserved,
+but the throughput ordering across monitoring cases was not (4041, 3996 and
+4033\,req/s for Docker, +Prometheus and +Grafana); absolute values are
+specific to one host state on one day.
+\item \textbf{The CPU-contention explanation is not supported.} Experiment~2's
+application CPU\% is bimodal because its $\approx$0.11s load window is sampled
+by a longer \texttt{docker stats} interval, so the reported fall with
+monitoring is mostly runs that read as idle. A new Experiment~6 (20 runs per
+case, fixed 20s load, CPU from kernel counters over exactly the load window,
+randomized case order, optional CPU-pinned arm) found the monitoring
+containers used $\approx$0.03 cores in total and no throughput difference from
+Docker-only whose 95\% interval excluded zero. The pinning test is
+inconclusive (difference-in-differences $+376$\,req/s, 95\% CI
+$[-343, +1061]$). Run-to-run throughput varied roughly three-fold and tracked
+host load ($r{=}-0.98$ with host busy cores), so the experiment can rule out
+large monitoring overhead on this host but not small effects.
+\item \textbf{Experiment 4 depends on kernel behaviour.} The retained
+allocation is zero-filled. On the replication kernel, which enables transparent
+hugepage shrinking of zero-filled pages (\texttt{shrink\_underused=1}), the
+kernel reclaimed that memory under cgroup pressure, so 0/20 containers were
+OOM-killed even though 16 requests ($\approx$320\,MB) succeeded against a
+150\,MB limit. With the allocation writing a non-zero byte to every page
+(\texttt{/memory?fill=true}, default off), 20/20 runs were OOM-killed after a
+mean 5.0 requests with peak memory 136.4\,MB, matching the original
+result (5.25 requests, 135.5\,MB). The OOM finding therefore holds when the
+memory is genuinely resident; the original zero-filled variant is kernel
+dependent. We did not establish whether the original 2026-09 run differed from
+the replication in THP settings or kernel.
 \item \textbf{cAdvisor container-label resolution.} This host's Docker uses
 the containerd-snapshotter storage driver rather than classic overlay2,
 which cAdvisor v0.49.1 cannot resolve container name/image labels against.
@@ -760,7 +801,8 @@ resource saturation and induced failure within low-single-digit seconds
 bounded by its scrape interval, and that the dominant cost of running a
 monitoring stack alongside the monitored application on constrained hardware
 is host-level CPU contention between them rather than in-process
-instrumentation overhead. The full raw measurement set, pipeline
+instrumentation overhead --- a conclusion the replication reported in
+Section~\ref{sec:limitations} did not confirm. The full raw measurement set, pipeline
 configuration, and analysis scripts underlying every table in this paper are
 published at
 \url{https://github.com/vinayaktyagi10/cicd-monitoring-study} to support
