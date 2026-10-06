@@ -1,0 +1,21 @@
+run 1/20: oom_killed=False time_to_oom=None peak_mem_mb=139.6 requests_ok=16
+run 2/20: oom_killed=False time_to_oom=None peak_mem_mb=140.0 requests_ok=16
+run 3/20: oom_killed=False time_to_oom=None peak_mem_mb=136.5 requests_ok=16
+run 4/20: oom_killed=False time_to_oom=None peak_mem_mb=140.3 requests_ok=16
+run 5/20: oom_killed=False time_to_oom=None peak_mem_mb=136.3 requests_ok=16
+run 6/20: oom_killed=False time_to_oom=None peak_mem_mb=136.3 requests_ok=16
+run 7/20: oom_killed=False time_to_oom=None peak_mem_mb=142.9 requests_ok=16
+run 8/20: oom_killed=False time_to_oom=None peak_mem_mb=140.4 requests_ok=16
+run 9/20: oom_killed=False time_to_oom=None peak_mem_mb=140.6 requests_ok=16
+run 10/20: oom_killed=False time_to_oom=None peak_mem_mb=136.4 requests_ok=16
+run 11/20: oom_killed=False time_to_oom=None peak_mem_mb=136.7 requests_ok=16
+run 12/20: oom_killed=False time_to_oom=None peak_mem_mb=139.7 requests_ok=16
+run 13/20: oom_killed=False time_to_oom=None peak_mem_mb=136.2 requests_ok=16
+run 14/20: oom_killed=False time_to_oom=None peak_mem_mb=136.2 requests_ok=16
+run 15/20: oom_killed=False time_to_oom=None peak_mem_mb=139.9 requests_ok=16
+run 16/20: oom_killed=False time_to_oom=None peak_mem_mb=136.0 requests_ok=16
+run 17/20: oom_killed=False time_to_oom=None peak_mem_mb=136.2 requests_ok=16
+run 18/20: oom_killed=False time_to_oom=None peak_mem_mb=139.7 requests_ok=16
+run 19/20: oom_killed=False time_to_oom=None peak_mem_mb=142.1 requests_ok=16
+run 20/20: oom_killed=False time_to_oom=None peak_mem_mb=139.8 requests_ok=16
+appended 20 rows to /home/vinayak/Research/cicd-monitoring-study/experiments/replication/2026-10-06_1653/raw/exp4_memory_stress.csv

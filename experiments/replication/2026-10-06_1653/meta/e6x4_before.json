@@ -1,0 +1,167 @@
+{
+  "timestamp": "2026-10-06T18:35:41.803610+05:30",
+  "git": {
+    "commit": "ba017497469263c8499a647b8648403ee132922b",
+    "branch": "master",
+    "status_porcelain": [
+      "M .gitignore",
+      " M experiments/DATA_PROVENANCE.md",
+      " M experiments/README.md",
+      " M experiments/log.md",
+      " M experiments/raw/exp1_deploy.csv",
+      " M experiments/raw/exp2_resource.csv",
+      " M experiments/raw/exp3_cpu_stress.csv",
+      " M experiments/raw/exp4_memory_stress.csv",
+      " M experiments/raw/exp5_failure_recovery.csv",
+      " M experiments/requirements.txt",
+      " M paper/figures/fig10_monitoring_overhead.pdf",
+      " M paper/figures/fig4_deploy_time.pdf",
+      " M paper/figures/fig5_cpu_utilization.pdf",
+      " M paper/figures/fig6_memory_utilization.pdf",
+      " M paper/figures/fig7_response_latency.pdf",
+      " M paper/figures/fig8_failure_timeline.pdf",
+      " M paper/figures/fig9_mttd_mttr.pdf",
+      " M paper/figures/generate_figures.py",
+      " M paper/paper.pdf",
+      "?? Makefile",
+      "?? Project-based_learning_presentation.pptx",
+      "?? experiments/replication/",
+      "?? experiments/results/validation/",
+      "?? experiments/scripts/analyze_overhead.py",
+      "?? experiments/scripts/campaign.py",
+      "?? experiments/scripts/exp6_overhead.py",
+      "?? experiments/scripts/hostmetrics.py",
+      "?? experiments/scripts/runmeta.py",
+      "?? experiments/scripts/stats_lib.py",
+      "?? experiments/scripts/validate.py",
+      "?? experiments/tests/",
+      "?? notes.md",
+      "?? order.txt",
+      "?? paper/figures/capture_grafana.py",
+      "?? paper/figures/verify_figures.py"
+    ]
+  },
+  "host": {
+    "hostname": "legion-slim",
+    "kernel": "7.2.9-1-cachyos",
+    "running_kernel_modules_present": true,
+    "cpu_model": "AMD Ryzen 7 8845HS w/ Radeon 780M Graphics",
+    "logical_cpus": 16,
+    "mem_total_kb": "MemTotal:       15646292 kB",
+    "os_release": "\"CachyOS\""
+  },
+  "power": {
+    "platform_profile": "performance",
+    "governor": "performance",
+    "energy_performance_preference": "performance",
+    "boost": "1",
+    "power_supply_online": {
+      "ucsi-source-psy-USBC000:002": "0",
+      "ucsi-source-psy-USBC000:001": "0",
+      "ACAD": "1"
+    }
+  },
+  "background": {
+    "busy_cores": 0.21,
+    "window_s": 3.0,
+    "loadavg": [
+      1.66552734375,
+      3.6943359375,
+      4.322265625
+    ],
+    "top_processes": [
+      "PID COMMAND         %CPU %MEM",
+      "    487 systemd-resolve  1.3  0.0",
+      "   1425 Hyprland         0.7  1.5",
+      "   1476 noctalia         0.6  1.4",
+      "  35213 2.1.290          0.6  1.8",
+      "   1867 voxtype          0.6  0.8",
+      "   1016 dockerd          0.5  0.8",
+      "   5293 electron         0.3  2.6",
+      "   1959 voxtype-osd-gtk  0.3  0.7",
+      "  35022 claude           0.2  1.1",
+      "    866 containerd       0.1  0.5",
+      "   5285 electron         0.1  1.2"
+    ]
+  },
+  "docker": {
+    "server": "29.8.2",
+    "compose": "5.6.0",
+    "info": "systemd cgroup-v2 overlayfs 7.2.9-1-cachyos",
+    "running_containers": [],
+    "images": {
+      "cicd-monitoring-study-app:local": {
+        "id": "sha256:7704ae06acef695ef08215fa51949bc86a9641e3d8ff096fde20be26c1886f39",
+        "repo_digests": [
+          "cicd-monitoring-study-app@sha256:7704ae06acef695ef08215fa51949bc86a9641e3d8ff096fde20be26c1886f39"
+        ],
+        "created": "2026-09-29T22:44:23.257051278+05:30"
+      },
+      "gcr.io/cadvisor/cadvisor:v0.49.1": {
+        "id": "sha256:3cde6faf0791ebf7b41d6f8ae7145466fed712ea6f252c935294d2608b1af388",
+        "repo_digests": [
+          "gcr.io/cadvisor/cadvisor@sha256:3cde6faf0791ebf7b41d6f8ae7145466fed712ea6f252c935294d2608b1af388"
+        ],
+        "created": "2024-03-02T20:59:01.440808486Z"
+      },
+      "prom/prometheus:v2.55.1": {
+        "id": "sha256:2659f4c2ebb718e7695cb9b25ffa7d6be64db013daba13e05c875451cf51b0d3",
+        "repo_digests": [
+          "prom/prometheus@sha256:2659f4c2ebb718e7695cb9b25ffa7d6be64db013daba13e05c875451cf51b0d3"
+        ],
+        "created": "2024-11-06T10:35:27.058590597Z"
+      },
+      "grafana/grafana:11.2.0": {
+        "id": "sha256:408afb9726de5122b00a2576763a8a57a3c86d5b0eff5305bc994ceb3eb96c3f",
+        "repo_digests": [
+          "grafana/grafana@sha256:408afb9726de5122b00a2576763a8a57a3c86d5b0eff5305bc994ceb3eb96c3f"
+        ],
+        "created": "2024-08-27T13:56:08.687971592Z"
+      }
+    }
+  },
+  "python": {
+    "executable": "/home/vinayak/Research/cicd-monitoring-study/.venv/bin/python",
+    "version": "3.14.7 (main, Aug 13 2026, 07:40:04) [GCC 16.2.1 20260810]",
+    "packages": [
+      "annotated-types==0.8.0",
+      "anyio==4.15.1",
+      "certifi==2026.7.22",
+      "click==8.5.0",
+      "contourpy==1.4.0",
+      "cycler==0.12.1",
+      "fastapi==0.115.0",
+      "fonttools==4.66.1",
+      "h11==0.16.0",
+      "httpcore==1.0.9",
+      "httptools==0.8.0",
+      "httpx==0.28.1",
+      "idna==3.20",
+      "iniconfig==2.3.0",
+      "kiwisolver==1.5.1",
+      "matplotlib==3.11.1",
+      "numpy==2.5.3",
+      "packaging==26.3",
+      "pillow==12.3.0",
+      "pluggy==1.6.0",
+      "prometheus_client==0.20.0",
+      "pydantic==2.13.5",
+      "pydantic_core==2.46.5",
+      "Pygments==2.21.0",
+      "pyparsing==3.3.3",
+      "pytest==9.1.1",
+      "python-dateutil==2.9.0.post0",
+      "python-dotenv==1.2.3",
+      "PyYAML==6.0.3",
+      "scipy==1.18.1",
+      "six==1.17.0",
+      "starlette==0.38.6",
+      "typing-inspection==0.4.4",
+      "typing_extensions==4.16.0",
+      "uvicorn==0.30.6",
+      "uvloop==0.22.1",
+      "watchfiles==1.3.0",
+      "websockets==17.1"
+    ]
+  }
+}

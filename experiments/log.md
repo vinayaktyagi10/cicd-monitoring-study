@@ -109,3 +109,60 @@ instantly — consistent with the ~2s shift. Likely cause is name resolution
 of the removed container on the new host (not yet confirmed). MTTD for a
 killed container is therefore sensitive to how the failure surfaces to the
 scraper, not only to scrape_interval.
+
+## 2026-10-06 — Validation audit of the existing data (no new runs)
+Command: `make reproduce` (tests, aggregate, paper_tables, statistical_analysis, validate, verify-figures, paper build).
+Raw: unchanged; outputs in experiments/results/validation/.
+Notes:
+- Every table/prose number (17/17) and every t-test reproduces from raw/.
+- Fig. 8 as published plotted 40 rows (original + 2026-09-10 reproduction) as one series; generate_figures.py now slices to the original 20 rows; figure and paper.pdf regenerated. Figs 4-7, 9, 10 reproduce pixel-identically.
+- exp2 app CPU% is bimodal: runs reading <1% are 0/20 (Docker), 12/20 (+Prometheus), 16/20 (+Grafana); non-idle runs read ~8-11% in every case. Load window per run is ~0.11s. The "app CPU falls with monitoring" result is therefore mostly a sampling artifact -- see DECISIONS.md and Experiment 6.
+- exp2 run_load counts failed requests in throughput_rps; original 60 rows unaffected (error_rate 0), the 2026-09-10 reproduction rows with error_rate 0.54-1.0 are not valid throughput values.
+- New data could not be collected: host kernel 7.2.6 running with only 7.2.9 modules installed (package upgraded, no reboot) -> veth unavailable -> Docker cannot start networked containers. Also platform_profile=low-power and ~3-4 cores of background browser CPU at the time.
+- 10 uncommitted rows in raw/*.csv (2 per file, after each file's original pass) are live-demo samples from scripts/demo.sh; excluded from all paper numbers by ORIGINAL_PASS_ROWS. Left in place, not committed.
+
+## 2026-10-06T16:53:48+05:30 - Replication campaign 2026-10-06_1653, step e1
+Command: `/home/vinayak/Research/cicd-monitoring-study/.venv/bin/python /home/vinayak/Research/cicd-monitoring-study/experiments/scripts/exp1_deploy.py --configs manual docker full_pipeline --runs 20 --out /home/vinayak/Research/cicd-monitoring-study/experiments/replication/2026-10-06_1653/raw/exp1_deploy.csv`
+Raw: experiments/replication/2026-10-06_1653/raw/ ; log: experiments/replication/2026-10-06_1653/logs/e1.log ; host snapshot: experiments/replication/2026-10-06_1653/meta/e1_before.json
+Notes: exit code 0, 2.0 min, background CPU 0.05 cores at start (written automatically by campaign.py).
+
+## 2026-10-06T16:57:02+05:30 - Replication campaign 2026-10-06_1653, step e2
+Command: `/home/vinayak/Research/cicd-monitoring-study/.venv/bin/python /home/vinayak/Research/cicd-monitoring-study/experiments/scripts/exp2_resource.py --runs 20 --out /home/vinayak/Research/cicd-monitoring-study/experiments/replication/2026-10-06_1653/raw/exp2_resource.csv`
+Raw: experiments/replication/2026-10-06_1653/raw/ ; log: experiments/replication/2026-10-06_1653/logs/e2.log ; host snapshot: experiments/replication/2026-10-06_1653/meta/e2_before.json
+Notes: exit code 0, 3.0 min, background CPU 0.22 cores at start (written automatically by campaign.py).
+
+## 2026-10-06T17:01:14+05:30 - Replication campaign 2026-10-06_1653, step e3
+Command: `/home/vinayak/Research/cicd-monitoring-study/.venv/bin/python /home/vinayak/Research/cicd-monitoring-study/experiments/scripts/exp3_cpu_stress.py --runs 20 --out /home/vinayak/Research/cicd-monitoring-study/experiments/replication/2026-10-06_1653/raw/exp3_cpu_stress.csv`
+Raw: experiments/replication/2026-10-06_1653/raw/ ; log: experiments/replication/2026-10-06_1653/logs/e3.log ; host snapshot: experiments/replication/2026-10-06_1653/meta/e3_before.json
+Notes: exit code 0, 2.7 min, background CPU 0.05 cores at start (written automatically by campaign.py).
+
+## 2026-10-06T17:05:08+05:30 - Replication campaign 2026-10-06_1653, step e4
+Command: `/home/vinayak/Research/cicd-monitoring-study/.venv/bin/python /home/vinayak/Research/cicd-monitoring-study/experiments/scripts/exp4_memory_stress.py --runs 20 --out /home/vinayak/Research/cicd-monitoring-study/experiments/replication/2026-10-06_1653/raw/exp4_memory_stress.csv`
+Raw: experiments/replication/2026-10-06_1653/raw/ ; log: experiments/replication/2026-10-06_1653/logs/e4.log ; host snapshot: experiments/replication/2026-10-06_1653/meta/e4_before.json
+Notes: exit code 0, 10.8 min, background CPU 0.05 cores at start (written automatically by campaign.py).
+
+## 2026-10-06T17:17:07+05:30 - Replication campaign 2026-10-06_1653, step e5
+Command: `/home/vinayak/Research/cicd-monitoring-study/.venv/bin/python /home/vinayak/Research/cicd-monitoring-study/experiments/scripts/exp5_failure_recovery.py --runs 20 --out /home/vinayak/Research/cicd-monitoring-study/experiments/replication/2026-10-06_1653/raw/exp5_failure_recovery.csv`
+Raw: experiments/replication/2026-10-06_1653/raw/ ; log: experiments/replication/2026-10-06_1653/logs/e5.log ; host snapshot: experiments/replication/2026-10-06_1653/meta/e5_before.json
+Notes: exit code 0, 2.8 min, background CPU 0.05 cores at start (written automatically by campaign.py).
+
+## 2026-10-06T17:21:09+05:30 - Replication campaign 2026-10-06_1653, step e6
+Command: `/home/vinayak/Research/cicd-monitoring-study/.venv/bin/python /home/vinayak/Research/cicd-monitoring-study/experiments/scripts/exp6_overhead.py --runs 20 --out /home/vinayak/Research/cicd-monitoring-study/experiments/replication/2026-10-06_1653/raw/exp6_overhead.csv`
+Raw: experiments/replication/2026-10-06_1653/raw/ ; log: experiments/replication/2026-10-06_1653/logs/e6.log ; host snapshot: experiments/replication/2026-10-06_1653/meta/e6_before.json
+Notes: exit code 0, 73.3 min, background CPU 0.05 cores at start (written automatically by campaign.py).
+
+## 2026-10-06T18:35:41+05:30 - Replication campaign 2026-10-06_1653, step e6x4
+Command: `/home/vinayak/Research/cicd-monitoring-study/.venv/bin/python /home/vinayak/Research/cicd-monitoring-study/experiments/scripts/exp6_overhead.py --runs 10 --cases docker docker_full --loadgen-procs 4 --out /home/vinayak/Research/cicd-monitoring-study/experiments/replication/2026-10-06_1653/raw/exp6_overhead_loadgen4.csv`
+Raw: experiments/replication/2026-10-06_1653/raw/ ; log: experiments/replication/2026-10-06_1653/logs/e6x4.log ; host snapshot: experiments/replication/2026-10-06_1653/meta/e6x4_before.json
+Notes: exit code 0, 24.4 min, background CPU 0.05 cores at start (written automatically by campaign.py).
+
+## 2026-10-06 — Replication campaign 2026-10-06_1653 and E4 zero-page finding
+Command: `make campaign` (e1-e5, e6, e6x4), then `exp4_memory_stress.py --fill --runs 20 --out experiments/replication/2026-10-06_1653/raw/exp4_memory_stress_fill.csv`.
+Raw: experiments/replication/2026-10-06_1653/ (original raw/ untouched).
+Notes:
+- Host: kernel 7.2.9, platform_profile=performance, background CPU <= 0.22 cores before each step.
+- Most absolute numbers differ from the original run (deploy -12..-29%, throughput +48%, CPU-stress MTTD 2.41s vs 5.65s, failure MTTD 3.14s vs 1.15s); MTTR, peak CPU under stress, Prometheus/Grafana CPU consistent.
+- E4 as originally written: 0/20 OOM-killed, 16 requests succeeded, peak ~139MB. Cause: zero-filled ballast is reclaimed by the kernel's THP underused-page shrinker (shrink_underused=1); memory.events showed max=1, oom_kill=0. A script allocating zero bytearrays was OOM-killed only with THP disabled via prctl.
+- E4 with --fill (non-zero byte per page): 20/20 OOM-killed, 5.0 requests, peak 136.4MB, time-to-OOM 11.06s -- matches the original.
+- Not established: whether the original 2026-09 run differed in kernel/THP settings. shrink_underused could not be toggled directly (needs root).
+- E6: monitoring containers ~0.03 cores; no throughput contrast vs Docker-only excludes zero; pinning test inconclusive; throughput varied ~3x run to run and tracked host load (r=-0.98).
