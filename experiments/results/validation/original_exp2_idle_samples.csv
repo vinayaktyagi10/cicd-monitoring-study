@@ -1,0 +1,4 @@
+case,n,idle_samples,idle_frac,idle_frac_lo,idle_frac_hi,busy_sample_mean_cpu,mean_load_window_s
+docker,20,0,0.0,0.0,0.16113,11.015,0.110227
+docker_prometheus,20,12,0.6,0.386578,0.781196,9.10875,0.114493
+docker_full,20,16,0.8,0.583978,0.919344,7.9925,0.124278

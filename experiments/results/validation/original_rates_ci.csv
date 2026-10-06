@@ -1,0 +1,4 @@
+exp,metric,successes,n,rate,wilson_lo,wilson_hi
+E1,CI/CD deploy success,7,8,0.875,0.529105,0.977583
+E3,CPU stress detected,20,20,1.0,0.83887,1.0
+E4,OOM-killed,20,20,1.0,0.83887,1.0

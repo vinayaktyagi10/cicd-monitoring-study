@@ -14,12 +14,18 @@ through that aggregation step — nothing is entered by hand.
 | `scripts/exp1_deploy.py` | E1 — deployment time & reliability | Wall-clock time to a healthy `/health` response, across 4 configurations (manual process, Docker, Docker+GitHub Actions CI/CD, full monitored pipeline) |
 | `scripts/exp2_resource.py` | E2 — resource utilization, response time, throughput, monitoring overhead | Per-container CPU%/memory (via `docker stats`), plus request latency/throughput/error rate under a fixed load, across 3 monitoring configurations |
 | `scripts/exp3_cpu_stress.py` | E3 — CPU stress detection | Time for Prometheus to observe induced CPU saturation crossing a threshold |
-| `scripts/exp4_memory_stress.py` | E4 — memory stress / OOM behaviour | Time-to-OOM, peak memory, and restart behaviour under a hard memory limit |
+| `scripts/exp4_memory_stress.py` | E4 — memory stress / OOM behaviour | Time-to-OOM, peak memory, and restart behaviour under a hard memory limit. `--fill` writes a non-zero byte to every allocated page; without it the retained memory is zero-filled and the kernel may reclaim it (THP shrinker), so no OOM occurs |
 | `scripts/exp5_failure_recovery.py` | E5 & E6 — failure detection & recovery | Time for Prometheus to detect a killed container, and time to recover after restart. Both phases live in one script because they are two halves of the same run (kill, then restart, in sequence) — splitting them would mean re-deriving the failure state twice. |
 | `scripts/loadgen.py` | — | Standalone concurrent HTTP load generator (used inside E2 and available to run independently) |
 | `scripts/stats_sampler.py` | — | Standalone `docker stats` poller (used inside E2 and available to run independently) |
 | `scripts/paper_tables.py` | — | Recomputes every table/prose number from `raw/` in the paper's layout and checks each line appears verbatim in `paper.tex` |
 | `scripts/aggregate.py` | — | Reads every CSV in `raw/`, computes mean/std/min/max grouped by configuration, writes `results/*_summary.csv` |
+| `scripts/exp6_overhead.py` | E6 — monitoring overhead vs host CPU vs throughput (not yet in the paper) | Fixed-duration load; host, per-container, load-generator and docker-proxy CPU from kernel counters over exactly the load window; randomized case order; optional CPU-pinned arm |
+| `scripts/analyze_overhead.py` | — | E6 analysis: CPU breakdown, throughput contrasts, pinning (contention) test, run-level throughput-vs-CPU relationships, figures |
+| `scripts/stats_lib.py` | — | Unit-tested CI / effect-size functions (`tests/test_stats_lib.py`) |
+| `scripts/validate.py` | — | 95% CI, Hedges' g, Cliff's δ for every headline number; original vs replication comparison |
+| `scripts/hostmetrics.py`, `scripts/runmeta.py` | — | Kernel CPU counters; host/software snapshot (kernel, power profile, background load, image digests, packages) |
+| `scripts/campaign.py` | — | Runs a full replication campaign into `replication/<timestamp>/` with preconditions, snapshots and logs |
 
 ## Prerequisites
 
@@ -56,17 +62,32 @@ so they can be run in any order without manual cleanup in between.
 
 ## Reproducing the paper's numbers from raw data
 
-No Docker needed — this only reads `raw/`.
+No Docker needed — this only reads `raw/`. From the repository root:
 
 ```bash
-# from the repository root
-python3 experiments/scripts/aggregate.py
-git diff --stat experiments/results/     # empty = byte-identical to the committed tables
-python3 experiments/scripts/paper_tables.py   # prints Tables III/V/VI + §VI numbers, checks each against paper.tex
-
-python3 -m venv .venv && .venv/bin/pip install -r experiments/requirements.txt
-.venv/bin/python experiments/scripts/statistical_analysis.py
+make reproduce
 ```
+
+which runs, in order: unit tests; `aggregate.py` and a check that `results/`
+is byte-identical to the committed tables; `paper_tables.py` (every table line
+recomputed and found verbatim in `paper.tex`); `statistical_analysis.py`;
+`validate.py` (CIs and effect sizes into `results/validation/`); pixel
+verification of every data figure; and the LaTeX build of `paper/paper.pdf`.
+Each target also runs alone (`make tables`, `make validate`, ...).
+
+## Repeating the experiments (replication campaign)
+
+```bash
+make image             # once
+make campaign          # or: make campaign-cicd  (adds 8 real GitHub Actions runs)
+make validate-campaign # original vs replication + Experiment 6 analysis
+```
+
+Output goes to `replication/<timestamp>/` (`raw/`, `meta/`, `logs/`,
+`results/`, `CAMPAIGN.md`), never to `raw/`. The campaign refuses to start a
+step unless Docker can start a networked container, no other containers run,
+the ports are free and background CPU is under 0.5 cores — close browsers and
+set a fixed power profile first; the profile is recorded in `meta/`.
 
 | Paper | Source after running the above |
 |---|---|
@@ -95,7 +116,9 @@ it happen rather than run each script directly.
 experiments/
   README.md          — this file
   log.md             — append-only log of when each experiment batch was run
-  scripts/           — the six experiment scripts + shared helpers
-  raw/               — one CSV per experiment, one row per run
-  results/           — mean/std/min/max summaries, computed from raw/ by aggregate.py
+  scripts/           — experiment scripts + shared helpers + analysis
+  tests/             — unit tests for the statistics and CPU-accounting code
+  raw/               — one CSV per experiment, one row per run (original data; never appended by campaigns)
+  results/           — mean/std/min/max summaries (aggregate.py); validation/ (validate.py)
+  replication/       — one directory per replication campaign
 ```

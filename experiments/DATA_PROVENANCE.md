@@ -120,15 +120,32 @@ directly (not the summaries):
 | p95 latency, all three pairs: NOT significant | same | $p{=}0.71$, $0.53$, $0.36$ |
 | Original vs.\ isolated CPU-stress detection: significant | `raw/exp3_cpu_stress.csv`, rows 1-20 vs.\ rows 41-60 | $t{=}3.52$, $p{=}0.0022$, $d{=}1.11$ |
 
-Reproduce with: `.venv-figs/bin/python3 experiments/scripts/statistical_analysis.py`
-(needs `scipy`, installed only in `.venv-figs/`, not the system Python).
+Reproduce with: `make stats` (creates `.venv/` from the pinned
+`experiments/requirements.txt` on first use).
+
+95% confidence intervals (t-based, sample SD), Hedges' $g$ with CI, Cliff's
+$\delta$, Mann-Whitney $p$ and Wilson intervals for every headline number and
+comparison above are produced by `make validate`
+(`scripts/validate.py`, building on the unit-tested `scripts/stats_lib.py`)
+into `results/validation/`. Note the paper's Std columns are population SD
+(`pstdev`); every interval is computed with the sample SD (n-1).
 
 ## Figures 4-10
 
 All rendered by `paper/figures/generate_figures.py` reading directly from
-`experiments/results/*.csv` and `experiments/raw/*.csv` — no numbers are
-typed into the figure script by hand. Reproduce with:
-`.venv-figs/bin/python3 paper/figures/generate_figures.py`.
+`experiments/results/*.csv` and the original-pass rows of
+`experiments/raw/*.csv` — no numbers are typed into the figure script by
+hand. Reproduce with `make figures`; `make verify-figures` re-renders into a
+temporary directory and compares every figure pixel-by-pixel against the
+committed PDF (exit status 1 on any difference). PDFs are written without a
+creation date, so the same data gives byte-identical files.
+
+**Correction, 2026-10-06:** Fig. 8 as first published (commit 61f26fc) was
+rendered from all 40 rows then in `raw/exp5_failure_recovery.csv` -- the
+original 20 runs plus the 2026-09-10 reproduction pass -- drawn as one series
+(visible as a line wrapping from run 20 back to run 1), while its caption
+says 20 runs. The script now slices to the original 20 rows, as every other
+figure and table already did; the regenerated figure is in the paper.
 
 | Figure | Source function | Source data |
 |---|---|---|
@@ -140,30 +157,39 @@ typed into the figure script by hand. Reproduce with:
 | Fig. 9 (MTTD/MTTR comparison) | `fig9_mttd_mttr()` | `results/exp3_cpu_stress_summary.csv` + `results/exp5_failure_recovery_summary.csv` |
 | Fig. 10 (monitoring overhead) | `fig10_monitoring_overhead()` | `results/exp2_resource_summary.csv` |
 
-Figs. 1-3 are not data-driven: Fig. 1 (architecture) and Fig. 2 (GitHub
-Actions workflow) are hand-built TikZ diagrams matching the real
-`docker-compose.yml` and `.github/workflows/ci.yml` structure; Fig. 3 is a
-live screenshot of the running Grafana dashboard (not regenerable by
-script — see `experiments/reproduction_run_2026-09-10.txt` for how it was
-captured).
+Figs. 1-3 are not data-driven. Fig. 1 (architecture) is TikZ source inline
+in `paper/paper.tex` (the `tikzpicture` before `\label{fig:arch}`); Fig. 2
+(GitHub Actions workflow) is TikZ source in `paper/figures/fig2_gha_workflow.tex`;
+both are rendered by `make paper`. Fig. 3 is a screenshot of the provisioned
+Grafana dashboard: the committed image was captured by hand in a browser;
+`paper/figures/capture_grafana.py` (`make grafana-figure`) re-captures it with
+a fixed stack, dashboard JSON, scripted workload, viewport (1532x784) and time
+range in headless Chromium. A live dashboard cannot reproduce pixel-for-pixel
+(the time axis alone differs), so this fixes the procedure, not the pixels.
 
-## Reproducing everything from scratch
+## Reproducing everything
 
-```bash
-docker compose build app
-python3 experiments/scripts/exp1_deploy.py --configs manual docker full_pipeline --runs 20
-python3 experiments/scripts/exp1_deploy.py --configs docker_cicd --runs 8
-python3 experiments/scripts/exp2_resource.py --runs 20
-python3 experiments/scripts/exp3_cpu_stress.py --runs 20
-python3 experiments/scripts/exp4_memory_stress.py --runs 20
-python3 experiments/scripts/exp5_failure_recovery.py --runs 20
-python3 experiments/scripts/aggregate.py
-.venv-figs/bin/python3 experiments/scripts/statistical_analysis.py
-.venv-figs/bin/python3 paper/figures/generate_figures.py
-```
+From raw data (no Docker): `make reproduce` -- unit tests, `aggregate.py` with
+a check that `results/` is byte-identical to the committed tables,
+`paper_tables.py` (every number found verbatim in `paper.tex`), the t-tests,
+`validate.py`, pixel verification of every figure, and the LaTeX build.
 
-Each `expN` script appends to its raw CSV rather than overwriting it, so
-running this against an existing `experiments/raw/` directory adds a new
-collection pass rather than replacing the one the paper's numbers came
-from — see the note on Table V and the reproduction writeup for why that
-matters when re-deriving numbers.
+New data (Docker): `make campaign` (or `make campaign-cicd` to include the 8
+real GitHub Actions runs). This runs the original, unmodified `expN` scripts
+plus Experiment 6 into `experiments/replication/<timestamp>/raw/`, never into
+`experiments/raw/`, with a host/software snapshot around each step, full logs,
+and an automatic `log.md` entry. `make validate-campaign` then compares
+original vs replication metric by metric and runs the overhead analysis.
+
+## Experiment 6 -- monitoring overhead vs host CPU vs throughput
+
+Not in the paper yet. `scripts/exp6_overhead.py`, analysed by
+`scripts/analyze_overhead.py`. Built because Experiment 2's app CPU% is
+bimodal (each run reads either ~8-10% or ~0.1-0.3%; idle-reading runs 0/20,
+12/20, 16/20 for Docker, +Prometheus, +Grafana -- `results/validation/
+original_exp2_idle_samples.csv`): its 300-request load lasts ~0.11s, so a
+`docker stats` reading mostly records whether it overlapped the burst.
+Experiment 6 uses a fixed-duration load and kernel CPU counters (cgroup v2
+`cpu.stat`, `/proc/stat`) read exactly at the window's edges, randomized case
+order with a fresh stack per run, a cAdvisor-only case, and a CPU-pinned arm
+that tests the contention explanation directly.
