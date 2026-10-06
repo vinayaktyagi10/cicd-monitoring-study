@@ -1,10 +1,13 @@
 #!/usr/bin/env python3
-"""Generates Figures 4-7, 9, 10 directly from experiments/results/*.csv and
+"""Generates Figures 4-10 directly from experiments/results/*.csv and
 experiments/raw/*.csv — no hand-entered numbers. Run with:
-    .venv-figs/bin/python3 paper/figures/generate_figures.py
+    .venv/bin/python paper/figures/generate_figures.py [--outdir DIR]
+PDFs carry no creation date, so identical data gives byte-identical files.
 """
+import argparse
 import csv
 import os
+import sys
 
 import matplotlib
 matplotlib.use("Agg")
@@ -14,6 +17,10 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(os.path.dirname(HERE))
 RESULTS = os.path.join(ROOT, "experiments", "results")
 RAW = os.path.join(ROOT, "experiments", "raw")
+sys.path.insert(0, os.path.join(ROOT, "experiments", "scripts"))
+from aggregate import ORIGINAL_PASS_ROWS
+
+OUTDIR = HERE
 
 plt.rcParams.update({
     "font.size": 10,
@@ -36,12 +43,12 @@ def load_summary(name):
 def load_raw(name):
     path = os.path.join(RAW, f"{name}.csv")
     with open(path, newline="") as f:
-        return list(csv.DictReader(f))
+        return list(csv.DictReader(f))[:ORIGINAL_PASS_ROWS[name]]
 
 
 def savefig(fig, name):
-    out = os.path.join(HERE, f"{name}.pdf")
-    fig.savefig(out, bbox_inches="tight")
+    out = os.path.join(OUTDIR, f"{name}.pdf")
+    fig.savefig(out, bbox_inches="tight", metadata={"CreationDate": None})
     print(f"wrote {out}")
     plt.close(fig)
 
@@ -229,6 +236,10 @@ def fig10_monitoring_overhead():
 
 
 if __name__ == "__main__":
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--outdir", default=HERE)
+    OUTDIR = ap.parse_args().outdir
+    os.makedirs(OUTDIR, exist_ok=True)
     fig4_deploy_time()
     fig5_cpu_utilization()
     fig6_memory_utilization()
