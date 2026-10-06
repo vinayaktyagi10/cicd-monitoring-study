@@ -73,9 +73,11 @@ def cpu_bound(iterations: int = 2_000_000):
 
 
 @app.get("/memory")
-def memory_alloc(mb: int = 10, hold: bool = False):
+def memory_alloc(mb: int = 10, hold: bool = False, fill: bool = False):
     start = time.perf_counter()
     block = bytearray(mb * 1024 * 1024)
+    if fill:
+        block[::4096] = b"\x01" * len(block[::4096])
     if hold:
         _memory_ballast.append(block)
     REQUEST_COUNT.labels(endpoint="memory", status="200").inc()

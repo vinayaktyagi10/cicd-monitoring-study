@@ -23,6 +23,7 @@ CONTAINER = "memstress-app"
 MEM_LIMIT_MB = 150
 HEALTH_URL = "http://localhost:8000/health"
 ALLOC_URL = "http://localhost:8000/memory?mb=20&hold=true"
+FILL_SUFFIX = "&fill=true"
 
 
 def cleanup():
@@ -50,9 +51,9 @@ def start_container():
     return False
 
 
-def alloc_once():
+def alloc_once(url=ALLOC_URL):
     try:
-        with urllib.request.urlopen(ALLOC_URL, timeout=5) as r:
+        with urllib.request.urlopen(url, timeout=5) as r:
             return r.status
     except Exception:
         return 0
@@ -95,7 +96,9 @@ def main():
     p.add_argument("--runs", type=int, default=20)
     p.add_argument("--max-wait", type=float, default=30.0)
     p.add_argument("--out", default=f"{ROOT}/experiments/raw/exp4_memory_stress.csv")
+    p.add_argument("--fill", action="store_true")
     args = p.parse_args()
+    alloc_url = ALLOC_URL + FILL_SUFFIX if args.fill else ALLOC_URL
 
     rows = []
     for i in range(args.runs):
@@ -116,7 +119,7 @@ def main():
         # observed, not re-queried after the loop exits.
         state = container_state()
         while time.perf_counter() - t0 < args.max_wait:
-            status = alloc_once()
+            status = alloc_once(alloc_url)
             state = container_state()
             if status == 200:
                 requests_ok += 1
