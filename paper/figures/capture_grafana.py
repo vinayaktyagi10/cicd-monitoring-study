@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
-"""Regenerates Fig. 3 (Grafana dashboard screenshot).
+"""Regenerates Fig. 3 (Grafana dashboard panels, one screenshot per panel).
 
 Brings up the full stack, drives a fixed scripted workload (steady /health
 and /cpu traffic, one CPU burst, one /memory allocation) so every panel has
-data, then captures the provisioned dashboard with headless Chromium at the
-original figure's viewport (1532x784, last 15 minutes, 5s refresh).
+data, then captures each provisioned dashboard panel separately (Grafana
+solo-panel view, last 5 minutes) with headless Chromium at 2x device scale.
 
 A live dashboard cannot reproduce pixel-for-pixel (the time axis alone
 differs per capture); what is fixed here is the stack, the dashboard JSON,
@@ -12,7 +12,7 @@ the workload, the viewport and the time range. Runs as its own Compose
 project ("fig3capture") so it starts from empty Prometheus/Grafana volumes
 and never touches the main stack's data. Stop the main stack first (same ports).
 
-    python paper/figures/capture_grafana.py [--out paper/figures/fig3_grafana_dashboard.jpg]
+    python paper/figures/capture_grafana.py [--outdir paper/figures]
 """
 import argparse
 import os
@@ -27,8 +27,12 @@ from PIL import Image
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(os.path.dirname(HERE))
-DASHBOARD = "http://localhost:3000/d/cicd-monitoring-study-app/?orgId=1&from=now-15m&to=now&refresh=5s"
-WIDTH, HEIGHT = 1532, 784
+PANEL_URL = ("http://localhost:3000/d-solo/cicd-monitoring-study-app/?orgId=1&from=now-5m&to=now"
+             "&panelId={id}&width={w}&height={h}")
+PANELS = [(1, "request_rate", 800, 400), (2, "latency_p95", 800, 400),
+          (3, "cpu", 800, 400), (4, "memory", 800, 400), (5, "target_up", 1600, 300)]
+SCALE = 2
+CHROME_PX = 88
 COMPOSE = ["docker", "compose", "-p", "fig3capture", "--profile", "full"]
 
 
@@ -74,7 +78,7 @@ def workload(seconds):
 
 def main():
     p = argparse.ArgumentParser()
-    p.add_argument("--out", default=os.path.join(HERE, "fig3_grafana_dashboard.jpg"))
+    p.add_argument("--outdir", default=HERE)
     p.add_argument("--traffic-seconds", type=int, default=90)
     p.add_argument("--keep-up", action="store_true")
     args = p.parse_args()
@@ -92,13 +96,17 @@ def main():
         workload(args.traffic_seconds)
         time.sleep(10)
         with tempfile.TemporaryDirectory() as tmp:
-            png = os.path.join(tmp, "shot.png")
-            subprocess.run([browser, "--headless=new", "--disable-gpu", "--hide-scrollbars",
-                            f"--user-data-dir={tmp}/profile", f"--window-size={WIDTH},{HEIGHT}",
-                            "--virtual-time-budget=15000", f"--screenshot={png}", DASHBOARD],
-                           check=True, capture_output=True, timeout=120)
-            Image.open(png).convert("RGB").save(args.out, quality=90)
-        print(f"wrote {args.out}")
+            for pid, name, w, h in PANELS:
+                png = os.path.join(tmp, f"{name}.png")
+                subprocess.run([browser, "--headless=new", "--disable-gpu", "--hide-scrollbars",
+                                f"--user-data-dir={tmp}/profile", f"--window-size={w},{h + CHROME_PX}",
+                                f"--force-device-scale-factor={SCALE}",
+                                "--virtual-time-budget=15000", f"--screenshot={png}",
+                                PANEL_URL.format(id=pid, w=w, h=h)],
+                               check=True, capture_output=True, timeout=120)
+                out = os.path.join(args.outdir, f"fig3_grafana_{name}.png")
+                Image.open(png).convert("RGB").crop((0, 0, w * SCALE, h * SCALE)).save(out)
+                print(f"wrote {out}")
     finally:
         if not args.keep_up:
             subprocess.run([*COMPOSE, "down", "-v"], cwd=ROOT, capture_output=True)

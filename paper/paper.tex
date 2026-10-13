@@ -273,17 +273,21 @@ target-health indicator, all auto-provisioned (no manual dashboard
 configuration) and updating in real time from the same Prometheus instance
 used throughout the experiments.
 
-\begin{figure}[t]
+\begin{figure*}[t]
 \centering
-\includegraphics[width=\columnwidth]{fig3_grafana_dashboard.jpg}
-\caption{Grafana dashboard under live load, auto-provisioned against the
-Prometheus datasource. The request-rate and CPU panels show a live traffic
-spike generated during the capture; the target-health panel (bottom, not
-shown in this crop) reports \texttt{up=1}. Captured from the running stack by
-\texttt{capture\_grafana.py}; unlike Figs.~\ref{fig:deploytime}--\ref{fig:overhead}
-it is a screenshot of live state and is not byte-reproducible.}
+\begin{minipage}{0.49\textwidth}\includegraphics[width=\linewidth]{fig3_grafana_request_rate.png}\end{minipage}\hfill
+\begin{minipage}{0.49\textwidth}\includegraphics[width=\linewidth]{fig3_grafana_latency_p95.png}\end{minipage}\\[4pt]
+\begin{minipage}{0.49\textwidth}\includegraphics[width=\linewidth]{fig3_grafana_cpu.png}\end{minipage}\hfill
+\begin{minipage}{0.49\textwidth}\includegraphics[width=\linewidth]{fig3_grafana_memory.png}\end{minipage}
+\caption{Grafana dashboard panels under a scripted live workload (last 5 minutes),
+auto-provisioned against the Prometheus datasource: request rate and p95
+latency by endpoint (top), application process CPU and memory (bottom). The
+target-health panel (not shown) reported \texttt{up=1}. Each panel was captured
+separately from the running stack by \texttt{capture\_grafana.py}; unlike
+Figs.~\ref{fig:deploytime}--\ref{fig:overhead} these are screenshots of live
+state and are not byte-reproducible.}
 \label{fig:grafana}
-\end{figure}
+\end{figure*}
 
 \textbf{Subject application.} Rather than an existing multi-service demo
 application, the study uses a small, hand-built FastAPI service with three
