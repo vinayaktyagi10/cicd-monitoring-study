@@ -48,6 +48,10 @@ def steps(raw, args):
         ("e6", f"{PY} {SCRIPTS}/exp6_overhead.py --runs {args.runs} --out {raw}/exp6_overhead.csv"),
         ("e6x4", f"{PY} {SCRIPTS}/exp6_overhead.py --runs {args.runs_e6x4} --cases docker docker_full "
                  f"--loadgen-procs 4 --out {raw}/exp6_overhead_loadgen4.csv"),
+        ("e6tw", f"{PY} {SCRIPTS}/diag_timewait.py --out {raw}/diag_timewait.csv"),
+        ("e6ka", f"{PY} {SCRIPTS}/exp6_overhead.py --keepalive --runs {args.runs} --out {raw}/exp6_overhead_keepalive.csv"),
+        ("e6x4ka", f"{PY} {SCRIPTS}/exp6_overhead.py --keepalive --runs {args.runs_e6x4} --cases docker docker_full "
+                   f"--loadgen-procs 4 --out {raw}/exp6_overhead_keepalive_loadgen4.csv"),
     ]
     if args.with_cicd:
         s.insert(1, ("e1cicd", f"{PY} {SCRIPTS}/exp1_deploy.py --configs docker_cicd --runs {args.cicd_runs} "
@@ -104,7 +108,7 @@ def append(path, text):
 def main():
     p = argparse.ArgumentParser()
     p.add_argument("--campaign", help="existing campaign dir to resume")
-    p.add_argument("--only", nargs="+", help="step ids to run (e1 e1cicd e2 e3 e4 e4fill e5 e6 e6x4)")
+    p.add_argument("--only", nargs="+", help="step ids to run (e1 e1cicd e2 e3 e4 e4fill e5 e6 e6x4 e6tw e6ka e6x4ka)")
     p.add_argument("--runs", type=int, default=20)
     p.add_argument("--runs-e6x4", type=int, default=10)
     p.add_argument("--with-cicd", action="store_true")

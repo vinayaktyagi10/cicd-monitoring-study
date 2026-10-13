@@ -54,3 +54,19 @@ def test_cgroup_candidates_cover_systemd_and_cgroupfs_drivers():
     paths = hm.cgroup_candidates("abc123")
     assert "/sys/fs/cgroup/system.slice/docker-abc123.scope" in paths
     assert "/sys/fs/cgroup/docker/abc123" in paths
+
+
+PROC_NET_TCP = """  sl  local_address rem_address   st tx_queue rx_queue tr tm->when retrnsmt   uid  timeout inode
+   0: 0100007F:1F40 00000000:0000 0A 00000000:00000000 00:00000000 00000000  1000        0 1 1 0 100 0 0 10 0
+   1: 0100007F:9C40 0100007F:1F40 06 00000000:00000000 03:00000F9F 00000000     0        0 0 3 0
+   2: 0100007F:9C41 0100007F:1F40 06 00000000:00000000 03:00000F9F 00000000     0        0 0 3 0
+   3: 0100007F:9C42 0100007F:1F40 01 00000000:00000000 00:00000000 00000000  1000        0 2 1 0 20 4 30 10 -1
+"""
+
+
+def test_count_timewait_counts_state_06_only():
+    assert hm.count_timewait(PROC_NET_TCP) == 2
+
+
+def test_count_timewait_header_only_is_zero():
+    assert hm.count_timewait(PROC_NET_TCP.splitlines()[0]) == 0

@@ -176,3 +176,13 @@ Note: the first e1cicd attempts at 23:47 were refused by the background-CPU prec
 ## 2026-10-07 — Provenance correction: the replication was on a reinstalled OS
 /var/log/pacman.log starts with a Calamares install on 2026-09-23, after the original runs (2026-09-09/10). Original host: Arch/Omarchy kernel 7.1.9-arch1-2, Docker 29.7.2 (paper Table II). Replication host: CachyOS kernel 7.2.9, Docker 29.8.2, THP=always. The paper now calls it a same-hardware, reinstalled-OS replication, not a same-host one. The original host's THP setting was not recorded and that install no longer exists.
 Also: scripts/demo_tables.sh wrote its live-demo rows into experiments/raw/; it now writes to a temp dir. The 10 leftover demo rows were removed from raw/ (backup patch kept outside the repo); no paper number changed (paper_tables.py 17/17).
+
+## 2026-10-07T00:35:37+05:30 - Replication campaign 2026-10-06_1653, step e6tw
+Command: `/home/vinayak/Research/cicd-monitoring-study/.venv/bin/python /home/vinayak/Research/cicd-monitoring-study/experiments/scripts/diag_timewait.py --out /home/vinayak/Research/cicd-monitoring-study/experiments/replication/2026-10-06_1653/raw/diag_timewait.csv`
+Raw: experiments/replication/2026-10-06_1653/raw/ ; log: experiments/replication/2026-10-06_1653/logs/e6tw.log ; host snapshot: experiments/replication/2026-10-06_1653/meta/e6tw_before.json
+Notes: exit code 0, 6.9 min, background CPU 0.14 cores at start (written automatically by campaign.py).
+
+## 2026-10-07T00:43:41+05:30 - Replication campaign 2026-10-06_1653, step e6ka
+Command: `/home/vinayak/Research/cicd-monitoring-study/.venv/bin/python /home/vinayak/Research/cicd-monitoring-study/experiments/scripts/exp6_overhead.py --keepalive --runs 20 --out /home/vinayak/Research/cicd-monitoring-study/experiments/replication/2026-10-06_1653/raw/exp6_overhead_keepalive.csv`
+Raw: experiments/replication/2026-10-06_1653/raw/ ; log: experiments/replication/2026-10-06_1653/logs/e6ka.log ; host snapshot: experiments/replication/2026-10-06_1653/meta/e6ka_before.json
+Notes: exit code 0, 73.3 min, background CPU 0.20 cores at start (written automatically by campaign.py).

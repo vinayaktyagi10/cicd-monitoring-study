@@ -48,3 +48,13 @@ Command: `/home/vinayak/Research/cicd-monitoring-study/.venv/bin/python /home/vi
 Exit code: 0, duration 8.4 min, background CPU before start 0.18 cores
 Log: logs/e1cicd.log
 
+## 2026-10-07T00:35:37+05:30 - e6tw
+Command: `/home/vinayak/Research/cicd-monitoring-study/.venv/bin/python /home/vinayak/Research/cicd-monitoring-study/experiments/scripts/diag_timewait.py --out /home/vinayak/Research/cicd-monitoring-study/experiments/replication/2026-10-06_1653/raw/diag_timewait.csv`
+Exit code: 0, duration 6.9 min, background CPU before start 0.14 cores
+Log: logs/e6tw.log
+
+## 2026-10-07T00:43:41+05:30 - e6ka
+Command: `/home/vinayak/Research/cicd-monitoring-study/.venv/bin/python /home/vinayak/Research/cicd-monitoring-study/experiments/scripts/exp6_overhead.py --keepalive --runs 20 --out /home/vinayak/Research/cicd-monitoring-study/experiments/replication/2026-10-06_1653/raw/exp6_overhead_keepalive.csv`
+Exit code: 0, duration 73.3 min, background CPU before start 0.20 cores
+Log: logs/e6ka.log
+

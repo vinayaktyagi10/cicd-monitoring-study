@@ -1,0 +1,7 @@
+ephemeral ports 32768-60999 (28232)
+rep 1 per_request first5s    2981 rps  last-quarter     242 rps  max TIME_WAIT 42205  last-quarter proxy sys 9.32
+rep 1 keepalive   first5s    6737 rps  last-quarter    6672 rps  max TIME_WAIT 20  last-quarter proxy sys 0.10
+rep 2 per_request first5s    3190 rps  last-quarter       0 rps  max TIME_WAIT 41916  last-quarter proxy sys 9.12
+rep 2 keepalive   first5s    5507 rps  last-quarter    6307 rps  max TIME_WAIT 20  last-quarter proxy sys 0.10
+rep 3 per_request first5s    2989 rps  last-quarter     119 rps  max TIME_WAIT 42002  last-quarter proxy sys 8.78
+rep 3 keepalive   first5s    6640 rps  last-quarter    6658 rps  max TIME_WAIT 20  last-quarter proxy sys 0.10

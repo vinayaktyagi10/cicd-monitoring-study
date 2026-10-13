@@ -14,7 +14,7 @@ Answers, each with 95% intervals:
     app, load generator and monitoring are pinned to disjoint cores?
     (bootstrap difference-in-differences);
  4. run-level relationship: throughput vs monitoring cores, vs background
-    ("other") cores and vs total host busy cores -- pooled, and within case
+    ("other") cores, vs docker-proxy cores and vs total host busy cores -- pooled, and within case
     (case means removed, so only run-to-run variation is left);
  5. bottleneck: is the app (~1 core under the GIL) or the load generator
     saturated?
@@ -127,14 +127,15 @@ def relationships(rows):
         if len(sub) < 5:
             continue
         means = {c: {} for c in ("throughput_ok_rps", "load_monitoring_cores", "load_other_cores",
-                                 "load_host_busy_cores", "load_app_cores")}
+                                 "load_host_busy_cores", "load_app_cores", "load_proxy_cores")}
         for case in {r["case"] for r in sub}:
             g = [r for r in sub if r["case"] == case]
             for c in means:
                 means[c][case] = statistics.mean(col(g, c))
         y = [r["throughput_ok_rps"] for r in sub]
         yw = [r["throughput_ok_rps"] - means["throughput_ok_rps"][r["case"]] for r in sub]
-        for x_col in ("load_monitoring_cores", "load_other_cores", "load_host_busy_cores", "load_app_cores"):
+        for x_col in ("load_monitoring_cores", "load_other_cores", "load_host_busy_cores", "load_app_cores",
+                      "load_proxy_cores"):
             x = [r[x_col] for r in sub]
             xw = [r[x_col] - means[x_col][r["case"]] for r in sub]
             for scope, xs, ys in (("pooled", x, y), ("within-case", xw, yw)):

@@ -35,7 +35,7 @@ def stats(vals):
 
 
 def f(v, places):
-    return str(Decimal(repr(v)).quantize(Decimal(1).scaleb(-places), rounding=ROUND_HALF_UP))
+    return str(Decimal(repr(float(v))).quantize(Decimal(1).scaleb(-places), rounding=ROUND_HALF_UP))
 
 
 def check(line):

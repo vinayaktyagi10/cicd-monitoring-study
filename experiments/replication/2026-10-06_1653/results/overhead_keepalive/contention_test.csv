@@ -1,0 +1,2 @@
+loadgen_procs,drop_unpinned_rps,drop_pinned_rps,did_rps,did_lo,did_hi,share_of_drop_removed_by_pinning
+1,61.714336,54.204693,7.509642,-94.242488,105.193829,0.121684

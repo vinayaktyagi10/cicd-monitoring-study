@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
-"""Generates Figures 4-10 directly from experiments/results/*.csv and
-experiments/raw/*.csv — no hand-entered numbers. Run with:
+"""Generates Figures 4-12 directly from experiments/results/*.csv,
+experiments/raw/*.csv and the replication campaign's raw/ — no hand-entered
+numbers. Run with:
     .venv/bin/python paper/figures/generate_figures.py [--outdir DIR]
 PDFs carry no creation date, so identical data gives byte-identical files.
 """
@@ -19,6 +20,9 @@ RESULTS = os.path.join(ROOT, "experiments", "results")
 RAW = os.path.join(ROOT, "experiments", "raw")
 sys.path.insert(0, os.path.join(ROOT, "experiments", "scripts"))
 from aggregate import ORIGINAL_PASS_ROWS
+import stats_lib as sl
+
+CAMPAIGN_RAW = os.path.join(ROOT, "experiments", "replication", "2026-10-06_1653", "raw")
 
 OUTDIR = HERE
 
@@ -235,6 +239,66 @@ def fig10_monitoring_overhead():
     savefig(fig, "fig10_monitoring_overhead")
 
 
+def load_campaign(name):
+    with open(os.path.join(CAMPAIGN_RAW, f"{name}.csv"), newline="") as f:
+        return [r for r in csv.DictReader(f) if r.get("status", "ok") == "ok"]
+
+
+# ---------------------------------------------------------------------------
+# Figure 11 — Experiment 6 diagnostic: throughput collapse vs TIME_WAIT
+# ---------------------------------------------------------------------------
+def fig11_timewait():
+    rows = load_campaign("diag_timewait")
+    modes = [("per_request", "New connection per request", BAR_COLOR2),
+             ("keepalive", "Keep-alive", BAR_COLOR)]
+    fig, axes = plt.subplots(3, 1, figsize=(5, 5.2), sharex=True)
+    for mode, label, color in modes:
+        for i, rep in enumerate(sorted({r["rep"] for r in rows})):
+            pts = [r for r in rows if r["mode"] == mode and r["rep"] == rep]
+            t = [float(r["t_s"]) for r in pts]
+            kw = {"color": color, "lw": 1, "alpha": 0.8, "label": label if i == 0 else None}
+            axes[0].plot(t, [float(r["ok_rps"]) for r in pts], **kw)
+            axes[1].plot(t, [int(r["timewait"]) / 1000 for r in pts], **kw)
+            axes[2].plot(t, [float(r["proxy_sys_cores"]) for r in pts], **kw)
+    axes[1].axhline(int(rows[0]["port_range_size"]) / 1000, color="grey", ls="--", lw=0.8)
+    axes[1].text(40, int(rows[0]["port_range_size"]) / 1000 - 2, "ephemeral port range", fontsize=7,
+                 ha="right", va="top", color="grey")
+    axes[0].set_ylabel("Successful req/s")
+    axes[1].set_ylabel("TIME_WAIT\nsockets (k)")
+    axes[2].set_ylabel("docker-proxy\nsystem CPU (cores)")
+    axes[2].set_xlabel("Time since load start (s)")
+    axes[0].legend(fontsize=8, frameon=False)
+    fig.align_ylabels(axes)
+    savefig(fig, "fig11_timewait_collapse")
+
+
+# ---------------------------------------------------------------------------
+# Figure 12 — Experiment 6 throughput per case, both load-generator clients
+# ---------------------------------------------------------------------------
+def fig12_overhead_throughput():
+    cases = [("docker", "Docker"), ("docker_cadvisor", "+cAdvisor"),
+             ("docker_prometheus", "+Prometheus"), ("docker_full", "+Grafana")]
+    series = [("exp6_overhead", "New connection per request", BAR_COLOR2),
+              ("exp6_overhead_keepalive", "Keep-alive", BAR_COLOR)]
+    fig, ax = plt.subplots(figsize=(5, 3))
+    width = 0.38
+    for k, (name, label, color) in enumerate(series):
+        rows = [r for r in load_campaign(name) if r["pinned"] == "False" and r["loadgen_procs"] == "1"]
+        means, err = [], [[], []]
+        for case, _ in cases:
+            m, lo, hi = sl.mean_ci([float(r["throughput_ok_rps"]) for r in rows if r["case"] == case])
+            means.append(m)
+            err[0].append(m - lo)
+            err[1].append(hi - m)
+        x = [i + (k - 0.5) * width for i in range(len(cases))]
+        ax.bar(x, means, width, yerr=err, capsize=3, color=color, label=label)
+    ax.set_xticks(range(len(cases)))
+    ax.set_xticklabels([c[1] for c in cases])
+    ax.set_ylabel("Successful req/s (mean, 95% CI)")
+    ax.legend(fontsize=8, frameon=False, loc="upper left")
+    savefig(fig, "fig12_overhead_throughput")
+
+
 if __name__ == "__main__":
     ap = argparse.ArgumentParser()
     ap.add_argument("--outdir", default=HERE)
@@ -247,3 +311,5 @@ if __name__ == "__main__":
     fig8_failure_timeline()
     fig9_mttd_mttr()
     fig10_monitoring_overhead()
+    fig11_timewait()
+    fig12_overhead_throughput()

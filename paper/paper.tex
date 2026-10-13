@@ -33,7 +33,7 @@ non-monitored but CI/CD-enabled configuration (Docker+CI/CD) that isolates
 automation's own cost, and against itself at increasing levels of
 observability once containerized (Docker only, Docker+Prometheus,
 Docker+Prometheus+Grafana --- the last being the full proposed system).
-Across six
+Across five
 controlled experiments (188 runs total: deployment time and reliability
 across four configurations, resource utilization and monitoring overhead
 across three cases, CPU-stress detection, memory-stress/OOM behaviour, and
@@ -44,15 +44,14 @@ roughly 35$\times$ slower end-to-end (50.2s vs.\ 1.45s mean) than a pre-built
 local Docker deploy, because it re-pays the full build+test cost every run; a Prometheus
 scrape loop detects induced CPU saturation in 5.65s mean (20/20 runs) and
 kernel-level container failure in 1.15s mean (20/20 runs), both bounded below
-by the 2s scrape interval; and, counter-intuitively, the monitored
-application container's own CPU utilization \emph{decreases} as more
-monitoring containers are added (11.0\% $\to$ 3.8\% $\to$ 1.8\% mean, Docker
-$\to$ +Prometheus $\to$ +Grafana) even as end-to-end throughput drops
-(2737 $\to$ 2641 $\to$ 2449 req/s), consistent with host-level CPU contention
-between the monitoring stack and the application rather than monitoring
-instrumentation overhead inside the application itself; a later
-replication, however, shows this CPU trend to be largely a sampling artifact
-and finds no measurable monitoring overhead (Section~\ref{sec:limitations}). All raw per-run
+by the 2s scrape interval; and, in the original run, the monitored
+application container's own CPU reading \emph{decreased} as monitoring
+containers were added (11.0\% $\to$ 3.8\% $\to$ 1.8\% mean) while throughput
+dropped (2737 $\to$ 2641 $\to$ 2449 req/s). We initially read this as host-level
+CPU contention, but a later replication and a controlled follow-up experiment
+show the CPU trend is largely a sampling artifact and find no measurable
+monitoring overhead, so the contention explanation is not supported
+(Section~\ref{sec:limitations}). All raw per-run
 measurements and analysis scripts underlying these results are published at
 \url{https://github.com/vinayaktyagi10/cicd-monitoring-study}.
 \end{abstract}
@@ -84,7 +83,7 @@ This paper reports a controlled, repeated-measures experimental evaluation of
 exactly that combination. We build a small subject application, wrap it in a
 Docker image, automate its build and test via a GitHub Actions workflow, and
 instrument it with Prometheus (scraping native application metrics) and
-Grafana (dashboarding). We then run it under six experiments spanning normal
+Grafana (dashboarding). We then run it under five experiments spanning normal
 operation, CPU stress, memory stress, and induced failure, comparing it
 against two baselines --- an uncontainerized process (Baseline A) and a
 containerized, CI/CD-free, unmonitored deployment (Baseline B) --- and a
@@ -280,7 +279,9 @@ used throughout the experiments.
 \caption{Grafana dashboard under live load, auto-provisioned against the
 Prometheus datasource. The request-rate and CPU panels show a live traffic
 spike generated during the capture; the target-health panel (bottom, not
-shown in this crop) reports \texttt{up=1}.}
+shown in this crop) reports \texttt{up=1}. Captured from the running stack by
+\texttt{capture\_grafana.py}; unlike Figs.~\ref{fig:deploytime}--\ref{fig:overhead}
+it is a screenshot of live state and is not byte-reproducible.}
 \label{fig:grafana}
 \end{figure}
 
@@ -343,7 +344,9 @@ dependencies and full inspectability.
 \section{Experimental Scenarios}
 \label{sec:scenarios}
 
-Six experiments were run, summarized in Table~\ref{tab:scenarios}. Each is
+Five experiments were run, summarized in Table~\ref{tab:scenarios}, followed
+during validation by a sixth that re-measures monitoring overhead under
+controlled load (Section~\ref{sec:e6method}). Each is
 described in more detail in the corresponding results subsection. A
 dedicated script per experiment (\texttt{exp1\_deploy.py} through
 \texttt{exp5\_failure\_recovery.py}) brings the relevant Docker Compose
@@ -367,7 +370,8 @@ pipeline (20), Docker+CI/CD (8) \\
 Docker (20), Docker+Prometheus (20), Docker+Prometheus+Grafana (20) \\
 3 & CPU stress detection & 20 \\
 4 & Memory stress / OOM behaviour & 20 \\
-5 \& 6 & Failure detection \& recovery & 20 \\
+5 & Failure detection \& recovery & 20 \\
+6 & Monitoring overhead vs.\ host CPU vs.\ throughput (validation) & 4 cases (20 each) + pinned arm, two load clients \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -418,12 +422,30 @@ ground-truth \texttt{OOMKilled} and \texttt{RestartCount}, captured at the
 moment of observation since Docker resets \texttt{State.OOMKilled} once the
 restart policy brings the container back up.
 
-\subsection{Application failure and recovery (Experiments 5 \& 6)}
+\subsection{Application failure and recovery (Experiment 5)}
 Against the Docker+Prometheus case, the application container is killed
 (\texttt{docker kill}) and Prometheus's \texttt{up\{job="app"\}} series is
 polled every 0.3s until it reports 0 (detection time). The container is then
 restarted (\texttt{docker start}) and both \texttt{/health} and
 \texttt{up\{job="app"\}==1} are polled until both recover (recovery time).
+
+\subsection{Monitoring overhead under controlled load (Experiment 6)}
+\label{sec:e6method}
+Added during validation because Experiment~2's $\approx$0.11\,s load window is
+shorter than one \texttt{docker stats} sample. Four cases (Docker,
++cAdvisor, +Prometheus, +Grafana) each receive a closed-loop load of 20\,s
+at concurrency 10 against \texttt{/health} on a freshly started stack, with
+case order shuffled within each of 20 blocks. CPU is read from kernel
+counters at exactly the start and end of the load window: \texttt{/proc/stat}
+for the whole host, each container's cgroup v2 \texttt{cpu.stat}, the load
+generator's own process time, and the \texttt{docker-proxy} processes that
+forward the published port; whatever remains is unattributed background. A
+CPU-pinned arm places the application, load generator and monitoring
+containers on disjoint physical cores for the Docker and +Grafana cases. The
+experiment was run twice with two load clients: the Experiment~2 client,
+which opens a new TCP connection per request, and a keep-alive client that
+reuses one HTTP/1.1 connection per worker
+(\texttt{exp6\_overhead.py --keepalive}).
 
 \section{Results}
 \label{sec:results}
@@ -556,8 +578,8 @@ the same way across containers on this host.}
 \includegraphics[width=\columnwidth]{fig7_response_latency.pdf}
 \caption{Mean and p95 request latency across the three monitoring cases
 (Table~\ref{tab:resource}, columns 3-4). Both rise slightly as monitoring
-is added, consistent with the throughput drop and the host-contention
-explanation in Section~\ref{sec:results}.}
+is added, but none of the pairwise differences is significant
+(Section~\ref{sec:results}), so this is a directional observation only.}
 \label{fig:latency}
 \end{figure}
 
@@ -658,8 +680,8 @@ saturation threshold must be crossed by an accumulating signal.}
 cAdvisor dominates the monitoring stack's own overhead at $\approx$6\% CPU
 in both cases; Prometheus and Grafana are comparatively cheap
 ($<$1\% each). This is the overhead the monitoring \emph{tooling} itself
-pays, separate from the host-contention effect on the application shown in
-Fig.~\ref{fig:cpuutil}.}
+pays; the follow-up measurement (Section~\ref{sec:limitations}) found the
+monitoring containers drew only $\approx$0.03 cores in total.}
 \label{fig:overhead}
 \end{figure}
 
@@ -693,6 +715,36 @@ reproduced the original. Generated from \texttt{results/original\_vs\_replicatio
 \label{tab:replication}
 \scriptsize
 \input{tables/replication}
+\end{table*}
+
+\begin{table*}[t]
+\centering
+\caption{Which findings survived replication. \emph{Reproduces}: the replication
+agrees with the original within its 95\% interval, or the qualitative
+result is unchanged. \emph{Environment-dependent}: the absolute value or the
+result differed on the reinstalled OS. \emph{Not supported}: contradicted by
+the follow-up experiment.}
+\label{tab:reproducibility}
+\small
+\begin{tabular}{p{0.34\textwidth}p{0.15\textwidth}p{0.42\textwidth}}
+\toprule
+Finding & Status & Evidence \\
+\midrule
+Deployment ordering (manual $<$ Docker $<$ full pipeline) & Reproduces & Ordering preserved; absolute times 12--29\% faster \\
+Docker+CI/CD deployment time & Reproduces & 48.6\,s vs.\ 50.2\,s, 8/8 vs.\ 7/8 successful \\
+MTTR after container failure & Reproduces & Within original interval \\
+Peak CPU under stress & Reproduces & Within original interval \\
+Prometheus and Grafana CPU draw & Reproduces & Within original interval \\
+OOM kill with resident memory & Reproduces & 20/20 killed with non-zero fill; 5.0 vs.\ 5.25 requests, 136.4 vs.\ 135.5\,MB \\
+Absolute deployment times & Environment-dependent & 12--29\% faster on replication OS \\
+Throughput level & Environment-dependent & About 48\% higher; throughput ordering across monitoring cases not preserved \\
+CPU-stress detection time & Environment-dependent & 2.41\,s vs.\ 5.65\,s \\
+Failure detection time & Environment-dependent & 3.14\,s vs.\ 1.15\,s \\
+OOM with zero-filled allocation & Environment-dependent & 0/20 killed on replication kernel (THP shrinker reclaims zero pages); original THP setting unknown \\
+Application CPU\% falls with monitoring & Not supported & Sampling artifact of a 0.11\,s load window; kernel counters show no effect \\
+Host CPU contention explains throughput drop & Not supported & Monitoring containers $\approx$0.03 cores; no throughput contrast excluding zero; pinning test inconclusive \\
+\bottomrule
+\end{tabular}
 \end{table*}
 
 \section{Discussion}
@@ -856,7 +908,8 @@ run-to-run.
 This study built a small but complete containerized CI/CD pipeline with
 integrated Prometheus--Grafana observability and evaluated it experimentally
 against a non-containerized baseline and against itself at increasing
-monitoring depth, across six controlled experiments totaling 188 runs. The
+monitoring depth, across five controlled experiments totaling 188 runs plus a validation
+experiment on monitoring overhead. The
 headline findings are that containerization's own deployment-time and
 resource cost is small and consistent with prior literature, that CI/CD
 automation's real cost is the repeated build-test cycle rather than the
@@ -864,9 +917,11 @@ deployment step itself, that Prometheus reliably detects both induced
 resource saturation and induced failure within low-single-digit seconds
 bounded by its scrape interval, and that the dominant cost of running a
 monitoring stack alongside the monitored application on constrained hardware
-is host-level CPU contention between them rather than in-process
-instrumentation overhead --- a conclusion the replication reported in
-Section~\ref{sec:limitations} did not confirm. The full raw measurement set, pipeline
+was not established: the original run suggested host-level CPU contention, but
+the replication and a controlled follow-up experiment
+(Section~\ref{sec:limitations}) did not support it and could rule out only
+large overhead. Table~\ref{tab:reproducibility} separates the findings that
+reproduced from those that depend on the environment. The full raw measurement set, pipeline
 configuration, and analysis scripts underlying every table in this paper are
 published at
 \url{https://github.com/vinayaktyagi10/cicd-monitoring-study} to support

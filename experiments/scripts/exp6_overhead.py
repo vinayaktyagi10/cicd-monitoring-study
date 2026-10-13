@@ -23,12 +23,14 @@ standing cost. One row per run, appended and flushed immediately.
 import argparse
 import csv
 import datetime
+import http.client
 import os
 import random
 import statistics
 import subprocess
 import threading
 import time
+import urllib.parse
 import urllib.request
 
 import multiprocessing
@@ -164,10 +166,10 @@ class Counters:
         return out
 
 
-def one_request():
+def one_request(url=HEALTH_URL):
     start = time.perf_counter()
     try:
-        with urllib.request.urlopen(HEALTH_URL, timeout=10) as resp:
+        with urllib.request.urlopen(url, timeout=10) as resp:
             resp.read()
             status = resp.status
     except Exception:
@@ -175,13 +177,44 @@ def one_request():
     return status, time.perf_counter() - start
 
 
-def run_load(duration, concurrency):
+class KeepAliveClient:
+    def __init__(self, url=HEALTH_URL, timeout=10):
+        u = urllib.parse.urlsplit(url)
+        self.host, self.port, self.path, self.timeout = u.hostname, u.port or 80, u.path or "/", timeout
+        self.conn = None
+
+    def request(self):
+        start = time.perf_counter()
+        try:
+            if self.conn is None:
+                self.conn = http.client.HTTPConnection(self.host, self.port, timeout=self.timeout)
+            self.conn.request("GET", self.path)
+            resp = self.conn.getresponse()
+            resp.read()
+            status = resp.status
+            if resp.will_close:
+                self.close()
+        except Exception:
+            self.close()
+            status = 0
+        return status, time.perf_counter() - start
+
+    def close(self):
+        if self.conn is not None:
+            self.conn.close()
+            self.conn = None
+
+
+def run_load(duration, concurrency, keepalive=False):
     deadline = time.perf_counter() + duration
     results = [[] for _ in range(concurrency)]
 
     def worker(out):
+        client = KeepAliveClient() if keepalive else None
         while time.perf_counter() < deadline:
-            out.append(one_request())
+            out.append(client.request() if client else one_request())
+        if client:
+            client.close()
 
     threads = [threading.Thread(target=worker, args=(results[i],)) for i in range(concurrency)]
     for t in threads:
@@ -194,22 +227,22 @@ def run_load(duration, concurrency):
 
 
 def _child_load(args):
-    duration, concurrency, cpus = args
+    duration, concurrency, cpus, keepalive = args
     if cpus:
         os.sched_setaffinity(0, cpus)
     t = time.process_time()
-    ok, errors = run_load(duration, concurrency)
+    ok, errors = run_load(duration, concurrency, keepalive)
     return ok, errors, time.process_time() - t
 
 
-def run_load_procs(duration, concurrency, procs, cpus):
+def run_load_procs(duration, concurrency, procs, cpus, keepalive=False):
     if procs == 1:
         t = time.process_time()
-        ok, errors = run_load(duration, concurrency)
+        ok, errors = run_load(duration, concurrency, keepalive)
         return ok, errors, time.process_time() - t
     split = [concurrency // procs + (i < concurrency % procs) for i in range(procs)]
     with multiprocessing.get_context("fork").Pool(procs) as pool:
-        parts = pool.map(_child_load, [(duration, c, cpus) for c in split])
+        parts = pool.map(_child_load, [(duration, c, cpus, keepalive) for c in split])
     return sorted(x for p in parts for x in p[0]), sum(p[1] for p in parts), sum(p[2] for p in parts)
 
 
@@ -229,7 +262,8 @@ def one_run(case, pinned, args, plan):
 
     cgroups = {s: hm.container_cgroup(cname(s)) for s in services}
     counters = Counters(cgroups, proxy_pids())
-    row = {"case": case, "pinned": pinned, "loadavg1_before": os.getloadavg()[0]}
+    row = {"case": case, "pinned": pinned, "loadavg1_before": os.getloadavg()[0],
+           "timewait_before": hm.read_timewait()}
 
     a = counters.read()
     time.sleep(args.idle)
@@ -241,8 +275,10 @@ def one_run(case, pinned, args, plan):
         os.sched_setaffinity(0, cpus)
     try:
         a = counters.read()
-        ok, errors, loadgen_cpu = run_load_procs(args.duration, args.concurrency, args.loadgen_procs, cpus)
+        ok, errors, loadgen_cpu = run_load_procs(args.duration, args.concurrency, args.loadgen_procs, cpus,
+                                                 args.keepalive)
         b = counters.read()
+        row["timewait_after"] = hm.read_timewait()
     finally:
         os.sched_setaffinity(0, range(os.cpu_count()))
     row.update(counters.delta(a, b, "load", loadgen_cpu))
@@ -258,7 +294,7 @@ def one_run(case, pinned, args, plan):
 
 
 FIELDS = ["timestamp", "block", "order_in_block", "case", "pinned", "seed", "duration_s", "concurrency",
-          "loadgen_procs", "settle_s", "loadavg1_before",
+          "loadgen_procs", "keepalive", "settle_s", "loadavg1_before", "timewait_before", "timewait_after",
           "requests_ok", "errors", "throughput_ok_rps", "mean_latency_ms", "p50_latency_ms",
           "p95_latency_ms", "p99_latency_ms",
           "load_wall_s", "load_host_busy_cores", "load_app_cores", "load_cadvisor_cores",
@@ -282,6 +318,8 @@ def main():
     p.add_argument("--concurrency", type=int, default=10)
     p.add_argument("--loadgen-procs", type=int, default=1,
                    help="load-generator processes sharing --concurrency (1 = same client as Experiment 2)")
+    p.add_argument("--keepalive", action="store_true",
+                   help="reuse one HTTP/1.1 connection per worker instead of a new TCP connection per request")
     p.add_argument("--seed", type=int, default=20261006)
     p.add_argument("--out", default=f"{ROOT}/experiments/raw/exp6_overhead.csv")
     args = p.parse_args()
@@ -309,6 +347,7 @@ def main():
             base = {"timestamp": datetime.datetime.now().astimezone().isoformat(), "block": block,
                     "order_in_block": k, "seed": args.seed, "duration_s": args.duration,
                     "concurrency": args.concurrency, "loadgen_procs": args.loadgen_procs,
+                    "keepalive": args.keepalive,
                     "settle_s": args.settle}
             try:
                 row = {**base, **one_run(case, pinned, args, plan), "status": "ok"}

@@ -70,3 +70,18 @@ def read_cgroup_usage(path):
 def read_cgroup_mem_mb(path):
     with open(os.path.join(path, "memory.current")) as fh:
         return int(fh.read()) / (1024 * 1024)
+
+
+def count_timewait(text):
+    return sum(1 for line in text.splitlines()[1:] if len(line.split()) > 3 and line.split()[3] == "06")
+
+
+def read_timewait():
+    total = 0
+    for path in ("/proc/net/tcp", "/proc/net/tcp6"):
+        try:
+            with open(path) as fh:
+                total += count_timewait(fh.read())
+        except OSError:
+            pass
+    return total

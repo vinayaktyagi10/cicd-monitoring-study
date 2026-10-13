@@ -12,7 +12,7 @@ help:
 	@echo "  make image              build the subject app image"
 	@echo "  make campaign           replication campaign, all experiments except CI/CD (~3h)"
 	@echo "  make campaign-cicd      same plus 8 real GitHub Actions runs"
-	@echo "  make validate-campaign  original vs replication, overhead analysis [CAMPAIGN=dir]"
+	@echo "  make validate-campaign  original vs replication, overhead analysis, E6 prose check [CAMPAIGN=dir]"
 	@echo "  make grafana-figure     recapture Fig. 3"
 
 venv: .venv/.installed
@@ -63,6 +63,10 @@ validate-campaign: venv
 	@if [ -f $(CAMPAIGN)/raw/exp6_overhead_loadgen4.csv ]; then \
 	  $(PY) $(SCRIPTS)/analyze_overhead.py $(CAMPAIGN)/raw/exp6_overhead_loadgen4.csv \
 	    --outdir $(CAMPAIGN)/results/overhead_loadgen4; fi
+	@for v in keepalive keepalive_loadgen4; do if [ -f $(CAMPAIGN)/raw/exp6_overhead_$$v.csv ]; then \
+	  $(PY) $(SCRIPTS)/analyze_overhead.py $(CAMPAIGN)/raw/exp6_overhead_$$v.csv \
+	    --outdir $(CAMPAIGN)/results/overhead_$$v; fi; done
+	cd $(SCRIPTS) && ../../$(PY) e6_prose.py --campaign ../../$(CAMPAIGN)
 
 grafana-figure: venv
 	$(PY) paper/figures/capture_grafana.py
