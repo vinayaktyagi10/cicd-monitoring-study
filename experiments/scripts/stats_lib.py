@@ -108,3 +108,20 @@ def bootstrap_did(a1, b1, a2, b2, n_boot=10000, conf=0.95, seed=0):
     rng = random.Random(seed)
     boots = sorted(did(*(rng.choices(g, k=len(g)) for g in groups)) for _ in range(n_boot))
     return did(*groups), boots[int(n_boot * (1 - conf) / 2)], boots[int(n_boot * (1 + conf) / 2) - 1]
+
+
+def holm_adjust(pvalues):
+    m = len(pvalues)
+    order = sorted(range(m), key=lambda i: pvalues[i])
+    adj, running = [0.0] * m, 0.0
+    for rank, i in enumerate(order):
+        running = max(running, (m - rank) * pvalues[i])
+        adj[i] = min(1.0, running)
+    return adj
+
+
+def shapiro_p(x):
+    x = list(x)
+    if len(x) < 3 or len(set(x)) < 2:
+        return float("nan")
+    return float(_st.shapiro(x).pvalue)

@@ -15,12 +15,14 @@ and never touches the main stack's data. Stop the main stack first (same ports).
     python paper/figures/capture_grafana.py [--outdir paper/figures]
 """
 import argparse
+import json
 import os
 import shutil
 import subprocess
 import tempfile
 import threading
 import time
+import urllib.parse
 import urllib.request
 
 from PIL import Image
@@ -54,6 +56,25 @@ def wait(url, timeout=120):
     raise RuntimeError(f"{url} not ready")
 
 
+def dump_panel_data(path, minutes=5, step=5):
+    with open(os.path.join(ROOT, "monitoring", "grafana", "provisioning", "dashboards",
+                           "app-dashboard.json")) as fh:
+        dash = json.load(fh)
+    end = time.time()
+    out = {"captured_unix": end, "window_s": minutes * 60, "step_s": step, "panels": {}}
+    for panel in dash["panels"]:
+        series = []
+        for target in panel["targets"]:
+            q = urllib.parse.urlencode({"query": target["expr"], "start": end - minutes * 60,
+                                        "end": end, "step": step})
+            with urllib.request.urlopen(f"http://localhost:9090/api/v1/query_range?{q}", timeout=10) as r:
+                series += json.load(r)["data"]["result"]
+        out["panels"][str(panel["id"])] = {"title": panel["title"], "series": series}
+    with open(path, "w") as fh:
+        json.dump(out, fh, indent=1, sort_keys=True)
+    print(f"wrote {path}")
+
+
 def workload(seconds):
     stop = time.time() + seconds
 
@@ -79,6 +100,7 @@ def workload(seconds):
 def main():
     p = argparse.ArgumentParser()
     p.add_argument("--outdir", default=HERE)
+    p.add_argument("--panel-data", default=os.path.join(ROOT, "experiments", "raw", "grafana_panels.json"))
     p.add_argument("--traffic-seconds", type=int, default=90)
     p.add_argument("--keep-up", action="store_true")
     args = p.parse_args()
@@ -95,6 +117,7 @@ def main():
         wait("http://localhost:3000/api/health")
         workload(args.traffic_seconds)
         time.sleep(10)
+        dump_panel_data(args.panel_data)
         with tempfile.TemporaryDirectory() as tmp:
             for pid, name, w, h in PANELS:
                 png = os.path.join(tmp, f"{name}.png")

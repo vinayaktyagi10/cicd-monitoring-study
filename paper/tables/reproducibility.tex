@@ -1,0 +1,24 @@
+\begin{tabular}{p{0.31\textwidth}p{0.19\textwidth}p{0.40\textwidth}}
+\toprule
+Finding & Status & Evidence \\
+\midrule
+Deployment ordering: manual $<$ Docker $<$ full pipeline & Reproduces & Order preserved in all three means \\
+Docker+CI/CD deployment time & Reproduces & Change $-3.2$\% \\
+MTTR after container failure & Reproduces & Change $-0.7$\% \\
+Peak CPU under CPU stress & Reproduces & Change $-1.5$\% \\
+Prometheus and Grafana CPU draw & Reproduces & Changes $-36.1$ to $-20.4$\% \\
+Application CPU\% reading falls as monitoring is added (observation only) & Reproduces & Falls in the replication too (7.4 $\to$ 3.5 $\to$ 1.9\%); the reading itself is a sampling artifact (last rows) \\
+OOM kill when the allocation is resident (non-zero fill) & Reproduces & 20/20 killed; requests and peak memory within 1 request and 1\,MB of the original \\
+Absolute deployment times & Environment-dependent & Change $-28.9$ to $-11.8$\% \\
+Throughput level & Environment-dependent & Change $+47.6$ to $+64.7$\% \\
+Throughput falls as monitoring is added & Environment-dependent & Replication means 4041, 3996, 4033\,req/s: not monotone \\
+p95 latency & Environment-dependent & Change $-45.1$ to $-39.5$\% \\
+Application memory & Environment-dependent & Change $+4.3$ to $+5.8$\% \\
+cAdvisor CPU draw & Environment-dependent & Change $-65.8$ to $-60.7$\% \\
+CPU-stress detection time & Environment-dependent & Change $-57.3$\% \\
+Failure detection time & Environment-dependent & Change $+172.9$\% \\
+OOM kill with zero-filled allocation & Environment-dependent & 20/20 killed originally, 0/20 in the replication (THP shrinker) \\
+Host CPU contention explains the throughput drop & Not supported & Monitoring containers 0.03 cores; keep-alive throughput within 1.4\% of Docker-only \\
+Application CPU\% falls because of contention & Not supported & Reading is bimodal (0.11\,s load window sampled by a longer interval), not a CPU effect \\
+\bottomrule
+\end{tabular}

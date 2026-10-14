@@ -8,3 +8,5 @@ venv/
 DECISIONS.md
 .venv-manual/
 paper/build/
+experiments/results/overhead*/*.png
+experiments/results/overhead*/*.pdf

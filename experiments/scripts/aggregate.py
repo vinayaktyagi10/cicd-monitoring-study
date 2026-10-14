@@ -41,6 +41,12 @@ ORIGINAL_PASS_ROWS = {
 }
 
 
+# Summarized by analyze_overhead.py instead: its cells split pinned and unpinned runs,
+# which a per-case mean would merge.
+SKIP = {"exp6_overhead", "exp6_overhead_loadgen4", "exp6_overhead_keepalive",
+        "exp6_overhead_keepalive_loadgen4", "diag_timewait", "diag_thp"}
+
+
 def to_float(v):
     if v is None or v == "":
         return None
@@ -97,6 +103,8 @@ def main():
     os.makedirs(OUT_DIR, exist_ok=True)
     for path in sorted(glob.glob(f"{RAW_DIR}/*.csv")):
         name = os.path.splitext(os.path.basename(path))[0]
+        if name in SKIP:
+            continue
         with open(path, newline="") as fh:
             rows = list(csv.DictReader(fh))
         if not rows:

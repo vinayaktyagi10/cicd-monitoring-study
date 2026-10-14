@@ -186,3 +186,9 @@ Notes: exit code 0, 6.9 min, background CPU 0.14 cores at start (written automat
 Command: `/home/vinayak/Research/cicd-monitoring-study/.venv/bin/python /home/vinayak/Research/cicd-monitoring-study/experiments/scripts/exp6_overhead.py --keepalive --runs 20 --out /home/vinayak/Research/cicd-monitoring-study/experiments/replication/2026-10-06_1653/raw/exp6_overhead_keepalive.csv`
 Raw: experiments/replication/2026-10-06_1653/raw/ ; log: experiments/replication/2026-10-06_1653/logs/e6ka.log ; host snapshot: experiments/replication/2026-10-06_1653/meta/e6ka_before.json
 Notes: exit code 0, 73.3 min, background CPU 0.20 cores at start (written automatically by campaign.py).
+
+## 2026-10-14 — E4 diagnostic: why the zero-filled allocation survives (diag_thp.py)
+Command: `.venv/bin/python experiments/scripts/diag_thp.py --reps 5 --out experiments/replication/2026-10-06_1653/raw/diag_thp.csv` (copied byte-identical to experiments/raw/diag_thp.csv).
+Host: kernel 7.2.9-2-cachyos, THP enabled=always, shrink_underused=1 (read from sysfs; not toggled).
+Result (5 reps x 4 variants, 150 MB no-swap container, 20 x 20 MB blocks): zero-filled + default THP survived all 20 blocks in 5/5 runs with 0 OOM kills and 169-171 thp_underused_split_page per run; zero-filled with THP disabled for the process, and non-zero fill with either setting, were OOM-killed at 7 blocks in 5/5 runs with 0-1 splits. Side check: bytearray(200 MB) raised RSS by 200 MB even with THP disabled (it writes the zeros), an untouched mmap by 1 MB.
+Not established: the original 2026-09 host's THP setting or whether its kernel had the shrinker; the sysfs knob could not be toggled without root, so the causal test is the per-process prctl disable, not the host knob.

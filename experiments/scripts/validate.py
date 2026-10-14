@@ -60,6 +60,13 @@ METRICS = [
     ("E5", "exp5_failure_recovery", None, "recovery_seconds", "MTTR (s)"),
 ]
 
+# Replication-only variants compared against an original file of a different name.
+REPLICATION_EXTRAS = [
+    ("E4", "exp4_memory_stress_fill", "exp4_memory_stress", None, "time_to_oom_seconds", "Time to OOM, non-zero fill (s)"),
+    ("E4", "exp4_memory_stress_fill", "exp4_memory_stress", None, "peak_mem_mb", "Peak memory, non-zero fill (MB)"),
+    ("E4", "exp4_memory_stress_fill", "exp4_memory_stress", None, "requests_before_failure", "Requests before OOM, non-zero fill"),
+]
+
 RATES = [
     ("E1", "exp1_deploy", ("config", "docker_cicd"), "success", "True", "CI/CD deploy success"),
     ("E3", "exp3_cpu_stress", None, "detected", "True", "CPU stress detected"),
@@ -202,11 +209,15 @@ def comparison_table(loader):
 
 def replication_table(rep_loader):
     out = []
-    for exp, name, flt, col, label in METRICS:
-        o = select(original(name), flt, col)
-        r = select(rep_loader(name), flt, col)
+    specs = [(exp, name, name, flt, col, label) for exp, name, flt, col, label in METRICS]
+    specs += REPLICATION_EXTRAS
+    for exp, name, orig_name, flt, col, label in specs:
+        o = select(original(orig_name), flt, col)
+        rep_rows = rep_loader(name)
+        r = select(rep_rows, flt, col)
         if not r:
-            out.append({"exp": exp, "metric": label, "verdict": "NOT RUN"})
+            verdict = f"NO VALUES (0/{len(rep_rows)})" if rep_rows else "NOT RUN"
+            out.append({"exp": exp, "metric": label, "verdict": verdict})
             continue
         do, dr = describe(o), describe(r)
         e = effect(r, o)
@@ -216,7 +227,12 @@ def replication_table(rep_loader):
                     "rep_n": dr["n"], "rep_mean": dr["mean"], "rep_ci_lo": dr.get("ci_lo"),
                     "rep_ci_hi": dr.get("ci_hi"),
                     "rel_change_pct": 100 * (dr["mean"] - do["mean"]) / do["mean"] if do["mean"] else float("nan"),
-                    **e, "verdict": "CONSISTENT" if inside else "DIFFERENT"})
+                    **e, "sw_p_orig": sl.shapiro_p(o), "sw_p_rep": sl.shapiro_p(r),
+                    "verdict": "CONSISTENT" if inside else "DIFFERENT"})
+    tested = [x for x in out if "welch_p" in x]
+    for key in ("welch_p", "mw_p"):
+        for x, adj in zip(tested, sl.holm_adjust([x[key] for x in tested])):
+            x[f"{key}_holm"] = adj
     return out
 
 

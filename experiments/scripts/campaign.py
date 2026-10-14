@@ -44,6 +44,7 @@ def steps(raw, args):
         ("e3", f"{PY} {SCRIPTS}/exp3_cpu_stress.py --runs {args.runs} --out {raw}/exp3_cpu_stress.csv"),
         ("e4", f"{PY} {SCRIPTS}/exp4_memory_stress.py --runs {args.runs} --out {raw}/exp4_memory_stress.csv"),
         ("e4fill", f"{PY} {SCRIPTS}/exp4_memory_stress.py --fill --runs {args.runs} --out {raw}/exp4_memory_stress_fill.csv"),
+        ("e4thp", f"{PY} {SCRIPTS}/diag_thp.py --out {raw}/diag_thp.csv"),
         ("e5", f"{PY} {SCRIPTS}/exp5_failure_recovery.py --runs {args.runs} --out {raw}/exp5_failure_recovery.csv"),
         ("e6", f"{PY} {SCRIPTS}/exp6_overhead.py --runs {args.runs} --out {raw}/exp6_overhead.csv"),
         ("e6x4", f"{PY} {SCRIPTS}/exp6_overhead.py --runs {args.runs_e6x4} --cases docker docker_full "

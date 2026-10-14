@@ -20,8 +20,15 @@ through that aggregation step — nothing is entered by hand.
 | `scripts/stats_sampler.py` | — | Standalone `docker stats` poller (used inside E2 and available to run independently) |
 | `scripts/paper_tables.py` | — | Recomputes every table/prose number from `raw/` in the paper's layout and checks each line appears verbatim in `paper.tex` |
 | `scripts/aggregate.py` | — | Reads every CSV in `raw/`, computes mean/std/min/max grouped by configuration, writes `results/*_summary.csv` |
-| `scripts/exp6_overhead.py` | E6 — monitoring overhead vs host CPU vs throughput (not yet in the paper) | Fixed-duration load; host, per-container, load-generator and docker-proxy CPU from kernel counters over exactly the load window; randomized case order; optional CPU-pinned arm |
+| `scripts/exp6_overhead.py` | E6 — monitoring overhead vs host CPU vs throughput (in the paper; raw data in `raw/exp6_overhead*.csv`, copies of `replication/2026-10-06_1653/raw/`) | Fixed-duration load; host, per-container, load-generator and docker-proxy CPU from kernel counters over exactly the load window; randomized case order; optional CPU-pinned arm |
 | `scripts/analyze_overhead.py` | — | E6 analysis: CPU breakdown, throughput contrasts, pinning (contention) test, run-level throughput-vs-CPU relationships, figures |
+| `scripts/diag_timewait.py` | E6 diagnostic | Runs the per-request and keep-alive load clients in turn (3 repetitions each, app-only stack, TIME_WAIT drained before each) and samples throughput, TIME_WAIT sockets and docker-proxy CPU every second for 40 s (explains the per-request throughput collapse) |
+| `scripts/e6_prose.py` | — | Recomputes every E6 number quoted in `paper.tex` from `raw/` and checks each appears verbatim (`make e6-prose`) |
+| `scripts/replication_table.py` | — | Renders the original-vs-replication CSV into the LaTeX table `paper/tables/replication.tex` |
+| `scripts/reproducibility_table.py` | — | Classifies every finding as reproduces / environment-dependent / not supported from the comparison CSV, raw files and E6 results; writes `paper/tables/reproducibility.tex` (`tests/test_reproducibility_table.py`) |
+| `scripts/stats_prose.py` | — | Recomputes the statistical-methods numbers quoted in the paper (normality rejections, test agreement, Holm correction) and checks each appears verbatim (`make stats-prose`) |
+| `scripts/diag_thp.py` | E4 diagnostic | Standalone 150 MB container probe: zero-filled vs non-zero allocation, default THP vs THP disabled for the process; records OOM kills and the kernel's underused-THP split counter (explains the zero-fill result) |
+| `scripts/thp_table.py` | — | Renders `raw/diag_thp.csv` into `paper/tables/thp_diag.tex` |
 | `scripts/stats_lib.py` | — | Unit-tested CI / effect-size functions (`tests/test_stats_lib.py`) |
 | `scripts/validate.py` | — | 95% CI, Hedges' g, Cliff's δ for every headline number; original vs replication comparison |
 | `scripts/hostmetrics.py`, `scripts/runmeta.py` | — | Kernel CPU counters; host/software snapshot (kernel, power profile, background load, image digests, packages) |
@@ -53,6 +60,10 @@ python3 experiments/scripts/exp2_resource.py --runs 20
 python3 experiments/scripts/exp3_cpu_stress.py --runs 20
 python3 experiments/scripts/exp4_memory_stress.py --runs 20
 python3 experiments/scripts/exp5_failure_recovery.py --runs 20
+python3 experiments/scripts/exp6_overhead.py --runs 20                      # per-request client
+python3 experiments/scripts/exp6_overhead.py --keepalive --runs 20          # keep-alive client
+python3 experiments/scripts/exp6_overhead.py --keepalive --runs 10 --cases docker docker_full --loadgen-procs 4
+python3 experiments/scripts/diag_timewait.py
 
 python3 experiments/scripts/aggregate.py        # regenerate results/*_summary.csv from raw/
 ```
@@ -71,8 +82,12 @@ make reproduce
 which runs, in order: unit tests; `aggregate.py` and a check that `results/`
 is byte-identical to the committed tables; `paper_tables.py` (every table line
 recomputed and found verbatim in `paper.tex`); `statistical_analysis.py`;
-`validate.py` (CIs and effect sizes into `results/validation/`); pixel
-verification of every data figure; and the LaTeX build of `paper/paper.pdf`.
+`validate.py` (CIs and effect sizes into `results/validation/`); the Experiment 6
+analysis (`make overhead`, diffed against the committed CSVs) and the check that
+every E6 number in the paper matches it (`make e6-prose`); pixel verification of
+every data figure; and the LaTeX build of `paper/paper.pdf`. Collecting new data
+is not part of this and does not give the same numbers (see the paper's
+Limitations).
 Each target also runs alone (`make tables`, `make validate`, ...).
 
 ## Repeating the experiments (replication campaign)

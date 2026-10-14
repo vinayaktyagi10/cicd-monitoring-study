@@ -160,12 +160,13 @@ figure and table already did; the regenerated figure is in the paper.
 Figs. 1-3 are not data-driven. Fig. 1 (architecture) is TikZ source inline
 in `paper/paper.tex` (the `tikzpicture` before `\label{fig:arch}`); Fig. 2
 (GitHub Actions workflow) is TikZ source in `paper/figures/fig2_gha_workflow.tex`;
-both are rendered by `make paper`. Fig. 3 is a screenshot of the provisioned
-Grafana dashboard: the committed image was captured by hand in a browser;
-`paper/figures/capture_grafana.py` (`make grafana-figure`) re-captures it with
-a fixed stack, dashboard JSON, scripted workload, viewport (1532x784) and time
-range in headless Chromium. A live dashboard cannot reproduce pixel-for-pixel
-(the time axis alone differs), so this fixes the procedure, not the pixels.
+both are rendered by `make paper`. Fig. 3 is four screenshots (request rate, p95 latency, CPU, memory) of the
+provisioned Grafana dashboard, one per panel. `paper/figures/capture_grafana.py`
+(`make grafana-figure`) captures them with a fixed stack, dashboard JSON, scripted
+workload and time window (last 5 minutes) in headless Chromium, and saves the
+Prometheus series behind every panel to `raw/grafana_panels.json`. A live dashboard
+cannot reproduce pixel-for-pixel (the time axis alone differs), so this fixes the
+procedure and records the data, not the pixels.
 
 ## Reproducing everything
 
@@ -183,7 +184,7 @@ original vs replication metric by metric and runs the overhead analysis.
 
 ## Experiment 6 -- monitoring overhead vs host CPU vs throughput
 
-Not in the paper yet. `scripts/exp6_overhead.py`, analysed by
+In the paper (Experiment 6). Raw per-run data: `experiments/raw/exp6_overhead.csv`, `exp6_overhead_loadgen4.csv`, `exp6_overhead_keepalive.csv`, `exp6_overhead_keepalive_loadgen4.csv` (plus `diag_timewait.csv`), byte-identical copies of the files the campaign wrote to `experiments/replication/2026-10-06_1653/raw/` (checked by `tests/test_raw_copies.py`); derived tables in `results/overhead*/`, regenerated and diffed by `make overhead`. `make e6-prose` checks that every E6 number quoted in the paper (25) matches the data; it is part of `make reproduce`. `scripts/exp6_overhead.py`, analysed by
 `scripts/analyze_overhead.py`. Built because Experiment 2's app CPU% is
 bimodal (each run reads either ~8-10% or ~0.1-0.3%; idle-reading runs 0/20,
 12/20, 16/20 for Docker, +Prometheus, +Grafana -- `results/validation/

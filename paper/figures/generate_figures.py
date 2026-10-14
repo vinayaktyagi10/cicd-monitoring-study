@@ -295,7 +295,8 @@ def fig12_overhead_throughput():
     ax.set_xticks(range(len(cases)))
     ax.set_xticklabels([c[1] for c in cases])
     ax.set_ylabel("Successful req/s (mean, 95% CI)")
-    ax.legend(fontsize=8, frameon=False, loc="upper left")
+    ax.set_ylim(0, 8200)
+    ax.legend(fontsize=8, frameon=False, loc="upper center", ncol=2)
     savefig(fig, "fig12_overhead_throughput")
 
 

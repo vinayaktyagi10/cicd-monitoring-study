@@ -1,0 +1,10 @@
+\begin{tabular}{llrrr}
+\toprule
+Allocation & THP for the probe & OOM-killed & Blocks reached (median) & Underused-THP splits \\
+\midrule
+Zero-filled & default & 0/5 & 20 & 169--171 \\
+Zero-filled & disabled & 5/5 & 7 & 0 \\
+Non-zero & default & 5/5 & 7 & 0--1 \\
+Non-zero & disabled & 5/5 & 7 & 0 \\
+\bottomrule
+\end{tabular}

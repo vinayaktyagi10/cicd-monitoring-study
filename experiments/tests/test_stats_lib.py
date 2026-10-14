@@ -127,3 +127,20 @@ def test_ols_slope_ci_recovers_exact_line():
     slope, lo, hi, intercept = sl.ols(x, y)
     assert slope == pytest.approx(2.0) and intercept == pytest.approx(1.0)
     assert lo == pytest.approx(2.0) and hi == pytest.approx(2.0)
+
+
+def test_holm_matches_statsmodels_reference_values():
+    p = [0.01, 0.04, 0.03, 0.005]
+    adj = sl.holm_adjust(p)
+    assert adj == pytest.approx([0.03, 0.06, 0.06, 0.02])
+
+
+def test_holm_is_monotone_capped_and_order_preserving():
+    adj = sl.holm_adjust([0.5, 0.9, 0.0001])
+    assert adj[2] < adj[0] <= adj[1] <= 1.0
+
+
+def test_shapiro_p_rejects_skewed_and_skips_degenerate():
+    assert sl.shapiro_p([1, 1, 1, 1, 1, 2, 30, 60]) < 0.05
+    assert math.isnan(sl.shapiro_p([2.0, 2.0, 2.0, 2.0]))
+    assert math.isnan(sl.shapiro_p([1.0, 2.0]))

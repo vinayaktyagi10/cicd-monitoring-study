@@ -78,12 +78,15 @@ def per_request_claims(rows):
     px = [r["load_proxy_cores"] for r in rows]
     r_px, _, lo_px, hi_px = sl.pearson([r["load_proxy_cores"] for r in u], [r["throughput_ok_rps"] for r in u])
     r_host, _, lo_h, hi_h = sl.pearson([r["load_host_busy_cores"] for r in u], [r["throughput_ok_rps"] for r in u])
+    did = ao.contention_test(ao.cells(rows))[0]
     return [
         ("throughput range, all runs", f"{thousands(min(tp))}--{thousands(max(tp))}\\,req/s"),
         ("runs below 500 req/s", f"{sum(t < 500 for t in tp)} of {len(tp)} runs below 500\\,req/s"),
         ("docker-proxy cores range", f"docker-proxy used {f(min(px), 1)}--{f(max(px), 1)} cores"),
         ("r(throughput, host busy)", f"$r{{=}}{f(r_host, 2)}$"),
         ("r(throughput, docker-proxy)", f"$r{{=}}{f(r_px, 3)}$, 95\\% CI {interval(lo_px, hi_px, 3)}"),
+        ("per-request pinning DiD", f"difference-in-differences {signed(did['did_rps'], 0)}\\,req/s, 95\\% CI "
+                                    f"{interval(did['did_lo'], did['did_hi'], 0)}"),
     ]
 
 
@@ -114,6 +117,16 @@ def keepalive_claims(rows, rows4, per_rows):
         ("pinning DiD", f"difference-in-differences {signed(did['did_rps'], 0)}\\,req/s, 95\\% CI "
                         f"{interval(did['did_lo'], did['did_hi'], 0)}"),
     ]
+    def dose(rs, procs, scope):
+        x = next(x for x in ao.relationships(rs)
+                 if x["loadgen_procs"] == procs and x["x"] == "load_monitoring_cores" and x["scope"] == scope)
+        return f"$r{{=}}{f(x['r'], 2)}$, 95\\% CI {interval(x['r_lo'], x['r_hi'], 2)}"
+
+    out.append(("dose-response, 1 loadgen, pooled", dose(rows, 1, "pooled")))
+    out.append(("dose-response, 1 loadgen, within-case", dose(rows, 1, "within-case")))
+    if rows4:
+        out.append(("dose-response, 4 loadgen, pooled", dose(rows4, 4, "pooled")))
+        out.append(("dose-response, 4 loadgen, within-case", dose(rows4, 4, "within-case")))
     if rows4:
         cs4 = ao.cells(rows4)
         c4 = {c["cell"]: c for c in ao.contrasts(cs4)}[ao.cell_name(("docker_full", False, 4))]

@@ -1,0 +1,3 @@
+cell,vs,throughput_diff,diff_lo,diff_hi,pct_change,welch_p,hedges_g,g_lo,g_hi,cliffs_delta,monitoring_cores,rps_lost_per_monitoring_core
++Grafana x4 loadgen,Docker x4 loadgen,-97.575237,-158.979192,-36.171281,-1.437413,0.004268,-1.450443,-2.462199,-0.438688,-0.777778,0.033091,2948.694111
++Grafana pinned x4 loadgen,Docker pinned x4 loadgen,-77.270968,-157.837732,3.295796,-1.111356,0.059084,-0.863592,-1.78006,0.052877,-0.5,0.03114,2481.421473
