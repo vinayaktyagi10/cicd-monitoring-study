@@ -1,24 +1,29 @@
-\begin{tabular}{p{0.31\textwidth}p{0.19\textwidth}p{0.40\textwidth}}
+\begin{tabular}{@{}p{0.36\textwidth}p{0.60\textwidth}@{}}
 \toprule
-Finding & Status & Evidence \\
+Finding & Evidence (change is replication relative to original) \\
 \midrule
-Deployment ordering: manual $<$ Docker $<$ full pipeline & Reproduces & Order preserved in all three means \\
-Docker+CI/CD deployment time & Reproduces & Change $-3.2$\% \\
-MTTR after container failure & Reproduces & Change $-0.7$\% \\
-Peak CPU under CPU stress & Reproduces & Change $-1.5$\% \\
-Prometheus and Grafana CPU draw & Reproduces & Changes $-36.1$ to $-20.4$\% \\
-Application CPU\% reading falls as monitoring is added (observation only) & Reproduces & Falls in the replication too (7.4 $\to$ 3.5 $\to$ 1.9\%); the reading itself is a sampling artifact (last rows) \\
-OOM kill when the allocation is resident (non-zero fill) & Reproduces & 20/20 killed; requests and peak memory within 1 request and 1\,MB of the original \\
-Absolute deployment times & Environment-dependent & Change $-28.9$ to $-11.8$\% \\
-Throughput level & Environment-dependent & Change $+47.6$ to $+64.7$\% \\
-Throughput falls as monitoring is added & Environment-dependent & Replication means 4041, 3996, 4033\,req/s: not monotone \\
-p95 latency & Environment-dependent & Change $-45.1$ to $-39.5$\% \\
-Application memory & Environment-dependent & Change $+4.3$ to $+5.8$\% \\
-cAdvisor CPU draw & Environment-dependent & Change $-65.8$ to $-60.7$\% \\
-CPU-stress detection time & Environment-dependent & Change $-57.3$\% \\
-Failure detection time & Environment-dependent & Change $+172.9$\% \\
-OOM kill with zero-filled allocation & Environment-dependent & 20/20 killed originally, 0/20 in the replication (THP shrinker) \\
-Host CPU contention explains the throughput drop & Not supported & Monitoring containers 0.03 cores; keep-alive throughput within 1.4\% of Docker-only \\
-Application CPU\% falls because of contention & Not supported & Reading is bimodal (0.11\,s load window sampled by a longer interval), not a CPU effect \\
+\multicolumn{2}{@{}l}{\textit{Reproduced}} \\
+Deployment ordering (manual $<$ Docker $<$ full pipeline) and CI/CD deployment time & Order preserved; CI/CD time $-3.2$\% \\
+Recovery time (MTTR) after a container kill & Change $-0.7$\% \\
+Peak CPU under CPU stress & Change $-1.5$\% \\
+Prometheus and Grafana CPU draw & Change $-36.1$ to $-20.4$\% \\
+OOM kill when the allocated memory is non-zero & 20/20 killed, within 1 request and 1\,MB of the original \\
+\midrule
+\multicolumn{2}{@{}l}{\textit{Environment-sensitive}} \\
+Absolute deployment time, throughput, latency and memory & deployment $-28.9$ to $-11.8$\%; throughput $+47.6$ to $+64.7$\%; p95 $-45.1$ to $-39.5$\%; memory $+4.3$ to $+5.8$\% \\
+Detection times & CPU stress $-57.3$\%; failure $+172.9$\% \\
+cAdvisor CPU draw & Change $-65.8$ to $-60.7$\% \\
+OOM kill when the allocated memory is zero-filled & 20/20 killed originally, 0/20 in the replication \\
+\midrule
+\multicolumn{2}{@{}l}{\textit{Not supported by replication}} \\
+Monitoring lowers throughput through host CPU contention & Replication means 4041, 3996, 4033\,req/s, not monotone; monitoring used 0.03 cores and keep-alive throughput stayed within 1.4\%; the penalty did not grow with background load (Exp.~7) \\
+Application CPU\% falls because monitoring competes for CPU & The reading falls again (7.4 $\to$ 3.5 $\to$ 1.9\%) but is bimodal: a 0.11\,s load sampled over a longer window \\
+\midrule
+\multicolumn{2}{@{}l}{\textit{Inconclusive}} \\
+A small throughput loss from monitoring & Detected in 1 of 2 keep-alive configurations ($-1.4$\%); mechanism not identified \\
+CPU pinning removes the monitoring penalty & Difference-in-differences $+376$\,req/s, 95\% CI $[-343, +1061]$, from the unreliable per-request client \\
+CI/CD deployment success rate & 7/8 [0.53, 0.98] originally, 8/8 [0.68, 1.00]; too few runs to estimate the rate \\
+THP policy is what changed the zero-fill OOM result & Sufficient on the replication host (Table~\ref{tab:thp}); the original THP setting was not recorded \\
+Cause of the 27\% Exp.~6 to Exp.~7 throughput gap & Power profile explains a few percent (Section~\ref{sec:p4}); Docker and kernel updates untested \\
 \bottomrule
 \end{tabular}

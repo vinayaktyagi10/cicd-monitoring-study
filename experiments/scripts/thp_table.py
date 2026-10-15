@@ -24,7 +24,7 @@ def summarize(rows):
 
 def build_table(rows):
     lines = ["\\begin{tabular}{llrrr}", "\\toprule",
-             "Allocation & THP for the probe & OOM-killed & Blocks reached (median) & Underused-THP splits \\\\",
+             "Allocation & THP & OOM-killed & Blocks & THP splits \\\\",
              "\\midrule"]
     for c in summarize(rows):
         lo, hi = c["splits"]
