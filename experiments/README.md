@@ -29,6 +29,9 @@ through that aggregation step — nothing is entered by hand.
 | `scripts/stats_prose.py` | — | Recomputes the statistical-methods numbers quoted in the paper (normality rejections, test agreement, Holm correction) and checks each appears verbatim (`make stats-prose`) |
 | `scripts/diag_thp.py` | E4 diagnostic | Standalone 150 MB container probe: zero-filled vs non-zero allocation, default THP vs THP disabled for the process; records OOM kills and the kernel's underused-THP split counter (explains the zero-fill result) |
 | `scripts/thp_table.py` | — | Renders `raw/diag_thp.csv` into `paper/tables/thp_diag.tex` |
+| `scripts/exp7_loaded_overhead.py` | E7 — monitoring cost under background CPU load | Keep-alive throughput, Docker vs full stack, with a duty-cycle burner holding the host at 0/20/40/60% CPU; burner CPU measured from /proc |
+| `scripts/analyze_loaded.py`, `scripts/e7_prose.py` | — | E7 analysis (penalty per level, difference-in-differences 60% vs 0%, pre-registered verdict) and verbatim check of E7 numbers in the paper |
+| `scripts/diag_power.py` | P4 diagnostic | Keep-alive Docker-only throughput in blocks alternating the laptop power profile (switched between blocks); logs profile, governor, EPP, boost, AC, mean CPU frequency and Tctl per run; refuses to run on battery |
 | `scripts/stats_lib.py` | — | Unit-tested CI / effect-size functions (`tests/test_stats_lib.py`) |
 | `scripts/validate.py` | — | 95% CI, Hedges' g, Cliff's δ for every headline number; original vs replication comparison |
 | `scripts/hostmetrics.py`, `scripts/runmeta.py` | — | Kernel CPU counters; host/software snapshot (kernel, power profile, background load, image digests, packages) |

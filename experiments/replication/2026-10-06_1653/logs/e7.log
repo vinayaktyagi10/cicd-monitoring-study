@@ -1,0 +1,136 @@
+Traceback (most recent call last):
+  File "/home/vinayak/Research/cicd-monitoring-study/experiments/scripts/exp7_loaded_overhead.py", line 179, in <module>
+    main()
+    ~~~~^^
+  File "/home/vinayak/Research/cicd-monitoring-study/experiments/scripts/exp7_loaded_overhead.py", line 168, in main
+    csv.DictWriter(fh, fieldnames=FIELDS, restval="", extrasaction="raise").writerow(
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        {k2: (round(v, 6) if isinstance(v, float) else v) for k2, v in row.items()})
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.14/csv.py", line 225, in writerow
+    return self.writer.writerow(self._dict_to_list(rowdict))
+                                ~~~~~~~~~~~~~~~~~~^^^^^^^^^
+  File "/usr/lib/python3.14/csv.py", line 220, in _dict_to_list
+    raise ValueError("dict contains fields not in fieldnames: "
+                     + ", ".join([repr(x) for x in wrong_fields]))
+ValueError: dict contains fields not in fieldnames: 'idle_proxy_cores', 'idle_grafana_cores', 'idle_cadvisor_cores', 'idle_app_cores', 'idle_prometheus_cores'
+[1/120] block 1 docker_full  bg=  40%   3987.0 rps host= 8.65 burner= 6.34 mon=0.049 ok
+[2/120] block 1 docker       bg=  40%   3933.1 rps host= 8.64 burner= 6.34 mon=0.000 ok
+[3/120] block 1 docker_full  bg=   0%   4304.9 rps host= 2.42 burner= 0.00 mon=0.043 ok
+[4/120] block 1 docker       bg=   0%   4361.9 rps host= 2.36 burner= 0.00 mon=0.000 ok
+[5/120] block 1 docker_full  bg=  20%   4242.1 rps host= 5.53 burner= 3.18 mon=0.049 ok
+[6/120] block 1 docker_full  bg=  60%   2319.1 rps host=12.15 burner= 9.46 mon=0.109 ok
+[7/120] block 1 docker       bg=  20%   4394.0 rps host= 5.44 burner= 3.18 mon=0.000 ok
+[8/120] block 1 docker       bg=  60%   2275.5 rps host=11.87 burner= 9.45 mon=0.000 ok
+[9/120] block 2 docker       bg=   0%   4351.8 rps host= 2.31 burner= 0.00 mon=0.000 ok
+[10/120] block 2 docker       bg=  20%   4351.6 rps host= 5.48 burner= 3.18 mon=0.000 ok
+[11/120] block 2 docker_full  bg=  60%   3904.3 rps host=11.80 burner= 9.54 mon=0.042 ok
+[12/120] block 2 docker       bg=  60%   3898.2 rps host=11.72 burner= 9.54 mon=0.000 ok
+[13/120] block 2 docker_full  bg=  40%   4100.4 rps host= 8.56 burner= 6.36 mon=0.035 ok
+[14/120] block 2 docker_full  bg=   0%   4209.9 rps host= 3.32 burner= 0.00 mon=0.041 ok
+[15/120] block 2 docker_full  bg=  20%   4447.6 rps host= 5.38 burner= 3.18 mon=0.034 ok
+[16/120] block 2 docker       bg=  40%   4260.3 rps host= 8.47 burner= 6.33 mon=0.000 ok
+[17/120] block 3 docker_full  bg=  20%   4439.9 rps host= 5.39 burner= 3.16 mon=0.036 ok
+[18/120] block 3 docker       bg=  40%   4073.9 rps host= 8.59 burner= 6.32 mon=0.000 ok
+[19/120] block 3 docker_full  bg=  60%   3638.9 rps host=12.12 burner= 9.49 mon=0.046 ok
+[20/120] block 3 docker_full  bg=  40%   3922.6 rps host= 8.91 burner= 6.35 mon=0.039 ok
+[21/120] block 3 docker       bg=  20%   4317.2 rps host= 5.66 burner= 3.17 mon=0.000 ok
+[22/120] block 3 docker       bg=  60%   3802.2 rps host=11.99 burner= 9.50 mon=0.000 ok
+[23/120] block 3 docker       bg=   0%   4788.9 rps host= 2.32 burner= 0.00 mon=0.000 ok
+[24/120] block 3 docker_full  bg=   0%   5026.5 rps host= 2.23 burner= 0.00 mon=0.031 ok
+[25/120] block 4 docker       bg=  20%   4403.8 rps host= 5.40 burner= 3.17 mon=0.000 ok
+[26/120] block 4 docker_full  bg=  40%   3817.1 rps host= 9.09 burner= 6.34 mon=0.041 ok
+[27/120] block 4 docker_full  bg=   0%   5090.7 rps host= 2.21 burner= 0.00 mon=0.029 ok
+[28/120] block 4 docker_full  bg=  20%   4373.0 rps host= 5.46 burner= 3.17 mon=0.037 ok
+[29/120] block 4 docker_full  bg=  60%   3823.3 rps host=11.77 burner= 9.53 mon=0.043 ok
+[30/120] block 4 docker       bg=   0%   4508.0 rps host= 2.69 burner= 0.00 mon=0.000 ok
+[31/120] block 4 docker       bg=  40%   4239.1 rps host= 8.43 burner= 6.36 mon=0.000 ok
+[32/120] block 4 docker       bg=  60%   3821.5 rps host=11.78 burner= 9.48 mon=0.000 ok
+[33/120] block 5 docker_full  bg=  40%   4168.3 rps host= 8.60 burner= 6.35 mon=0.038 ok
+[34/120] block 5 docker_full  bg=   0%   4590.9 rps host= 2.85 burner= 0.00 mon=0.038 ok
+[35/120] block 5 docker       bg=  40%   3717.1 rps host= 8.99 burner= 6.33 mon=0.000 ok
+[36/120] block 5 docker       bg=  60%   3235.2 rps host=12.86 burner= 9.43 mon=0.000 ok
+[37/120] block 5 docker       bg=  20%   3999.3 rps host= 6.01 burner= 3.17 mon=0.000 ok
+[38/120] block 5 docker       bg=   0%   4847.2 rps host= 2.36 burner= 0.00 mon=0.000 ok
+[39/120] block 5 docker_full  bg=  60%   3380.5 rps host=12.44 burner= 9.47 mon=0.052 ok
+[40/120] block 5 docker_full  bg=  20%   4051.0 rps host= 6.10 burner= 3.15 mon=0.037 ok
+[41/120] block 6 docker_full  bg=   0%   4734.9 rps host= 2.59 burner= 0.00 mon=0.037 ok
+[42/120] block 6 docker       bg=   0%   4974.1 rps host= 2.24 burner= 0.00 mon=0.000 ok
+[43/120] block 6 docker       bg=  60%   3748.9 rps host=11.80 burner= 9.53 mon=0.000 ok
+[44/120] block 6 docker       bg=  20%   4433.6 rps host= 5.31 burner= 3.18 mon=0.000 ok
+[45/120] block 6 docker       bg=  40%   3932.0 rps host= 8.84 burner= 6.35 mon=0.000 ok
+[46/120] block 6 docker_full  bg=  40%   3867.5 rps host= 9.02 burner= 6.36 mon=0.041 ok
+[47/120] block 6 docker_full  bg=  20%   4569.7 rps host= 5.41 burner= 3.17 mon=0.035 ok
+[48/120] block 6 docker_full  bg=  60%   3706.7 rps host=11.91 burner= 9.46 mon=0.046 ok
+[49/120] block 7 docker       bg=  40%   4282.5 rps host= 8.39 burner= 6.36 mon=0.000 ok
+[50/120] block 7 docker_full  bg=  20%   4394.0 rps host= 5.48 burner= 3.17 mon=0.042 ok
+[51/120] block 7 docker       bg=  20%   4469.5 rps host= 5.54 burner= 3.17 mon=0.000 ok
+[52/120] block 7 docker_full  bg=  60%   3808.3 rps host=11.92 burner= 9.52 mon=0.045 ok
+[53/120] block 7 docker       bg=  60%   3929.8 rps host=11.73 burner= 9.54 mon=0.000 ok
+[54/120] block 7 docker       bg=   0%   4991.7 rps host= 2.23 burner= 0.00 mon=0.000 ok
+[55/120] block 7 docker_full  bg=   0%   4895.3 rps host= 2.27 burner= 0.00 mon=0.040 ok
+[56/120] block 7 docker_full  bg=  40%   4144.6 rps host= 8.61 burner= 6.35 mon=0.040 ok
+[57/120] block 8 docker_full  bg=  40%   4191.0 rps host= 8.49 burner= 6.36 mon=0.042 ok
+[58/120] block 8 docker_full  bg=  60%   3825.5 rps host=11.79 burner= 9.53 mon=0.043 ok
+[59/120] block 8 docker       bg=  60%   3918.1 rps host=11.88 burner= 9.53 mon=0.000 ok
+[60/120] block 8 docker       bg=   0%   4831.9 rps host= 2.25 burner= 0.00 mon=0.000 ok
+[61/120] block 8 docker       bg=  20%   4559.7 rps host= 5.32 burner= 3.18 mon=0.000 ok
+[62/120] block 8 docker       bg=  40%   4210.2 rps host= 8.52 burner= 6.34 mon=0.000 ok
+[63/120] block 8 docker_full  bg=   0%   4892.8 rps host= 2.31 burner= 0.00 mon=0.040 ok
+[64/120] block 8 docker_full  bg=  20%   4541.0 rps host= 5.48 burner= 3.18 mon=0.040 ok
+[65/120] block 9 docker       bg=  60%   2224.0 rps host=12.66 burner= 9.40 mon=0.000 ok
+[66/120] block 9 docker_full  bg=  20%   4313.9 rps host= 5.60 burner= 3.18 mon=0.041 ok
+[67/120] block 9 docker       bg=   0%   4931.8 rps host= 2.23 burner= 0.00 mon=0.000 ok
+[68/120] block 9 docker_full  bg=  40%   4001.9 rps host= 8.54 burner= 6.35 mon=0.045 ok
+[69/120] block 9 docker_full  bg=  60%   3952.8 rps host=11.91 burner= 9.54 mon=0.043 ok
+[70/120] block 9 docker       bg=  20%   4556.6 rps host= 5.32 burner= 3.18 mon=0.000 ok
+[71/120] block 9 docker       bg=  40%   4212.6 rps host= 8.43 burner= 6.36 mon=0.000 ok
+[72/120] block 9 docker_full  bg=   0%   4811.7 rps host= 2.35 burner= 0.00 mon=0.038 ok
+[73/120] block 10 docker       bg=  20%   4461.8 rps host= 5.41 burner= 3.18 mon=0.000 ok
+[74/120] block 10 docker_full  bg=   0%   4839.1 rps host= 2.32 burner= 0.00 mon=0.042 ok
+[75/120] block 10 docker       bg=  60%   3983.2 rps host=11.71 burner= 9.54 mon=0.000 ok
+[76/120] block 10 docker_full  bg=  40%   4129.9 rps host= 8.48 burner= 6.36 mon=0.041 ok
+[77/120] block 10 docker_full  bg=  60%   3929.1 rps host=11.80 burner= 9.53 mon=0.044 ok
+[78/120] block 10 docker       bg=   0%   4865.3 rps host= 2.21 burner= 0.00 mon=0.000 ok
+[79/120] block 10 docker_full  bg=  20%   3789.0 rps host= 6.53 burner= 3.17 mon=0.047 ok
+[80/120] block 10 docker       bg=  40%   3958.1 rps host= 8.53 burner= 6.36 mon=0.000 ok
+[81/120] block 11 docker       bg=  40%   4043.5 rps host= 8.47 burner= 6.35 mon=0.000 ok
+[82/120] block 11 docker_full  bg=   0%   4846.6 rps host= 2.41 burner= 0.00 mon=0.042 ok
+[83/120] block 11 docker       bg=   0%   5096.0 rps host= 2.26 burner= 0.00 mon=0.000 ok
+[84/120] block 11 docker_full  bg=  60%   3949.9 rps host=11.70 burner= 9.56 mon=0.045 ok
+[85/120] block 11 docker_full  bg=  20%   4446.7 rps host= 5.41 burner= 3.18 mon=0.038 ok
+[86/120] block 11 docker       bg=  20%   4506.5 rps host= 5.34 burner= 3.18 mon=0.000 ok
+[87/120] block 11 docker       bg=  60%   3904.8 rps host=11.72 burner= 9.53 mon=0.000 ok
+[88/120] block 11 docker_full  bg=  40%   4127.1 rps host= 8.50 burner= 6.36 mon=0.044 ok
+[89/120] block 12 docker       bg=  40%   4257.9 rps host= 8.44 burner= 6.35 mon=0.000 ok
+[90/120] block 12 docker       bg=   0%   4748.1 rps host= 2.69 burner= 0.00 mon=0.000 ok
+[91/120] block 12 docker_full  bg=   0%   5053.0 rps host= 2.22 burner= 0.00 mon=0.031 ok
+[92/120] block 12 docker       bg=  60%   3679.6 rps host=12.06 burner= 9.52 mon=0.000 ok
+[93/120] block 12 docker_full  bg=  20%   4383.6 rps host= 5.40 burner= 3.17 mon=0.043 ok
+[94/120] block 12 docker_full  bg=  60%   3730.7 rps host=12.08 burner= 9.52 mon=0.046 ok
+[95/120] block 12 docker_full  bg=  40%   4080.2 rps host= 8.63 burner= 6.36 mon=0.042 ok
+[96/120] block 12 docker       bg=  20%   4693.2 rps host= 5.26 burner= 3.19 mon=0.000 ok
+[97/120] block 13 docker_full  bg=  60%   3764.9 rps host=11.78 burner= 9.50 mon=0.051 ok
+[98/120] block 13 docker_full  bg=  40%   3985.3 rps host= 8.73 burner= 6.36 mon=0.037 ok
+[99/120] block 13 docker       bg=  60%   3872.4 rps host=11.74 burner= 9.53 mon=0.000 ok
+[100/120] block 13 docker_full  bg=   0%   4737.4 rps host= 2.50 burner= 0.00 mon=0.037 ok
+[101/120] block 13 docker_full  bg=  20%   4011.7 rps host= 6.11 burner= 3.16 mon=0.043 ok
+[102/120] block 13 docker       bg=  20%   4534.0 rps host= 5.50 burner= 3.18 mon=0.000 ok
+[103/120] block 13 docker       bg=   0%   5028.9 rps host= 2.25 burner= 0.00 mon=0.000 ok
+[104/120] block 13 docker       bg=  40%   3885.4 rps host= 8.75 burner= 6.33 mon=0.000 ok
+[105/120] block 14 docker       bg=  40%   3878.0 rps host= 8.95 burner= 6.33 mon=0.000 ok
+[106/120] block 14 docker       bg=  60%   3726.0 rps host=12.03 burner= 9.52 mon=0.000 ok
+[107/120] block 14 docker_full  bg=  40%   3947.9 rps host= 8.85 burner= 6.35 mon=0.041 ok
+[108/120] block 14 docker_full  bg=  60%   3437.6 rps host=12.41 burner= 9.48 mon=0.049 ok
+[109/120] block 14 docker       bg=  20%   4545.6 rps host= 5.46 burner= 3.17 mon=0.000 ok
+[110/120] block 14 docker_full  bg=  20%   4454.8 rps host= 5.45 burner= 3.17 mon=0.045 ok
+[111/120] block 14 docker_full  bg=   0%   5181.1 rps host= 2.27 burner= 0.00 mon=0.032 ok
+[112/120] block 14 docker       bg=   0%   4812.1 rps host= 2.34 burner= 0.00 mon=0.000 ok
+[113/120] block 15 docker_full  bg=   0%   4238.8 rps host= 2.37 burner= 0.00 mon=0.045 ok
+[114/120] block 15 docker       bg=   0%   4251.8 rps host= 2.49 burner= 0.00 mon=0.000 ok
+[115/120] block 15 docker_full  bg=  40%   3965.3 rps host= 8.68 burner= 6.33 mon=0.044 ok
+[116/120] block 15 docker       bg=  60%   3899.2 rps host=11.62 burner= 9.53 mon=0.000 ok
+[117/120] block 15 docker       bg=  40%   3915.7 rps host= 8.60 burner= 6.35 mon=0.000 ok
+[118/120] block 15 docker_full  bg=  20%   4379.4 rps host= 5.42 burner= 3.18 mon=0.053 ok
+[119/120] block 15 docker       bg=  20%   4308.3 rps host= 5.35 burner= 3.18 mon=0.000 ok
+[120/120] block 15 docker_full  bg=  60%   2941.1 rps host=11.87 burner= 9.48 mon=0.093 ok

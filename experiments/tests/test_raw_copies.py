@@ -7,7 +7,8 @@ import pytest
 EXP = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 CAMPAIGN = os.path.join(EXP, "replication", "2026-10-06_1653", "raw")
 NAMES = ["exp6_overhead.csv", "exp6_overhead_loadgen4.csv", "exp6_overhead_keepalive.csv",
-         "exp6_overhead_keepalive_loadgen4.csv", "diag_timewait.csv", "diag_thp.csv"]
+         "exp6_overhead_keepalive_loadgen4.csv", "diag_timewait.csv", "diag_thp.csv",
+         "exp7_loaded_overhead.csv", "diag_power.csv"]
 
 
 def sha(path):

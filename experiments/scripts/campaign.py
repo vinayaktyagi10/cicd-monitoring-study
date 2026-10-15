@@ -49,6 +49,7 @@ def steps(raw, args):
         ("e6", f"{PY} {SCRIPTS}/exp6_overhead.py --runs {args.runs} --out {raw}/exp6_overhead.csv"),
         ("e6x4", f"{PY} {SCRIPTS}/exp6_overhead.py --runs {args.runs_e6x4} --cases docker docker_full "
                  f"--loadgen-procs 4 --out {raw}/exp6_overhead_loadgen4.csv"),
+        ("e7", f"{PY} {SCRIPTS}/exp7_loaded_overhead.py --runs {args.runs_e7} --out {raw}/exp7_loaded_overhead.csv"),
         ("e6tw", f"{PY} {SCRIPTS}/diag_timewait.py --out {raw}/diag_timewait.csv"),
         ("e6ka", f"{PY} {SCRIPTS}/exp6_overhead.py --keepalive --runs {args.runs} --out {raw}/exp6_overhead_keepalive.csv"),
         ("e6x4ka", f"{PY} {SCRIPTS}/exp6_overhead.py --keepalive --runs {args.runs_e6x4} --cases docker docker_full "
@@ -71,6 +72,14 @@ def port_free(port):
         return s.connect_ex(("127.0.0.1", port)) != 0
 
 
+def read_sysfs(path):
+    try:
+        with open(path) as fh:
+            return fh.read().strip()
+    except OSError:
+        return ""
+
+
 def busy_cores(seconds=5):
     a = hostmetrics.read_proc_stat()
     time.sleep(seconds)
@@ -88,6 +97,8 @@ def preconditions(args):
     busy = [p for p in (8000, 8080, 9090, 3000) if not port_free(p)]
     if busy:
         problems.append(f"ports in use: {busy}")
+    if read_sysfs("/sys/class/power_supply/ACAD/online") == "0":
+        problems.append("on battery power")
     b = busy_cores()
     if b > args.max_busy_cores:
         problems.append(f"background CPU {b:.2f} cores > --max-busy-cores {args.max_busy_cores}")
@@ -109,9 +120,10 @@ def append(path, text):
 def main():
     p = argparse.ArgumentParser()
     p.add_argument("--campaign", help="existing campaign dir to resume")
-    p.add_argument("--only", nargs="+", help="step ids to run (e1 e1cicd e2 e3 e4 e4fill e5 e6 e6x4 e6tw e6ka e6x4ka)")
+    p.add_argument("--only", nargs="+", help="step ids to run (e1 e1cicd e2 e3 e4 e4fill e5 e6 e6x4 e6tw e6ka e6x4ka e7)")
     p.add_argument("--runs", type=int, default=20)
     p.add_argument("--runs-e6x4", type=int, default=10)
+    p.add_argument("--runs-e7", type=int, default=15)
     p.add_argument("--with-cicd", action="store_true")
     p.add_argument("--cicd-runs", type=int, default=8)
     p.add_argument("--cooldown", type=float, default=60.0)

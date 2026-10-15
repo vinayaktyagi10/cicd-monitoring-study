@@ -192,3 +192,28 @@ Command: `.venv/bin/python experiments/scripts/diag_thp.py --reps 5 --out experi
 Host: kernel 7.2.9-2-cachyos, THP enabled=always, shrink_underused=1 (read from sysfs; not toggled).
 Result (5 reps x 4 variants, 150 MB no-swap container, 20 x 20 MB blocks): zero-filled + default THP survived all 20 blocks in 5/5 runs with 0 OOM kills and 169-171 thp_underused_split_page per run; zero-filled with THP disabled for the process, and non-zero fill with either setting, were OOM-killed at 7 blocks in 5/5 runs with 0-1 splits. Side check: bytearray(200 MB) raised RSS by 200 MB even with THP disabled (it writes the zeros), an untouched mmap by 1 MB.
 Not established: the original 2026-09 host's THP setting or whether its kernel had the shrinker; the sysfs knob could not be toggled without root, so the causal test is the per-process prctl disable, not the host knob.
+
+Note (2026-10-14, e7): the first e7 attempt was refused by the background-CPU precondition (0.70 cores > 0.5; desktop compositor, terminal, browser and the Claude Code session). The step was finally started with --max-busy-cores 1.5 (background measured 0.96 cores on the retry, so 1.0 was borderline). Rationale: e7 itself adds 3-9 cores of load, so 0.7 cores of background is small against it, and every run records the unattributed CPU (load_other_cores). This is a deviation from the E1-E6 campaign limit and is disclosed in the paper.
+
+## 2026-10-14T10:25:24+05:30 - Replication campaign 2026-10-06_1653, step e7
+Command: `/home/vinayak/Research/cicd-monitoring-study/.venv/bin/python /home/vinayak/Research/cicd-monitoring-study/experiments/scripts/exp7_loaded_overhead.py --runs 15 --out /home/vinayak/Research/cicd-monitoring-study/experiments/replication/2026-10-06_1653/raw/exp7_loaded_overhead.csv`
+Raw: experiments/replication/2026-10-06_1653/raw/ ; log: experiments/replication/2026-10-06_1653/logs/e7.log ; host snapshot: experiments/replication/2026-10-06_1653/meta/e7_before.json
+Notes: exit code 1, 0.6 min, background CPU 0.96 cores at start (written automatically by campaign.py).
+Note (2026-10-14, e7): the second e7 attempt (10:25) crashed after 0.6 min because exp7_loaded_overhead.py's header lacked the per-container idle columns; no rows were kept. Fixed, one-run smoke test passed (4 cells, burner 6.3 cores at the 40% level), then relaunched. The failed attempt remains recorded in CAMPAIGN.md.
+Note (2026-10-15, e7): the third e7 attempt (2026-10-14) was stopped when the Claude Code session ended, before any data row was written (CSV held only its header; removed). Added --start-block so an interrupted run can resume without repeating blocks. Relaunched 2026-10-15.
+
+## 2026-10-15T21:40:09+05:30 - Replication campaign 2026-10-06_1653, step e7
+Command: `/home/vinayak/Research/cicd-monitoring-study/.venv/bin/python /home/vinayak/Research/cicd-monitoring-study/experiments/scripts/exp7_loaded_overhead.py --runs 15 --out /home/vinayak/Research/cicd-monitoring-study/experiments/replication/2026-10-06_1653/raw/exp7_loaded_overhead.csv`
+Raw: experiments/replication/2026-10-06_1653/raw/ ; log: experiments/replication/2026-10-06_1653/logs/e7.log ; host snapshot: experiments/replication/2026-10-06_1653/meta/e7_before.json
+Notes: exit code 0, 73.7 min, background CPU 0.72 cores at start (written automatically by campaign.py).
+
+## 2026-10-15 — Experiment 7 result (monitoring cost under 0/20/40/60% background CPU)
+Raw: experiments/replication/2026-10-06_1653/raw/exp7_loaded_overhead.csv (copied byte-identical to experiments/raw/). 120/120 runs ok, 73.7 min, --max-busy-cores 1.5 (background 0.72 cores at start).
+Achieved host busy cores 2.4 / 5.5 / 8.6 / 12.0 of 16. Penalty (docker - docker_full, req/s): 0% -4 [-219,+210]; 20% +113 [-29,+255]; 40% +24 [-89,+138]; 60% -13 [-399,+373]. Pre-registered DiD(60-0) -9 [-424,+389] -> contention not supported.
+Weaknesses: CV 3-6% per cell (up to 16% at 60%), so only a load-dependent penalty > ~11% is excluded. Docker-only keep-alive at 0% was 4,759 req/s vs 6,559 in E6 (-27%), unattributed CPU 0.63 vs 0.32 cores; cause not established.
+
+## 2026-10-15 — P4 diagnostic: does the power profile explain the E6-E7 drift? (diag_power.py)
+Found first: e7 snapshots show battery + platform_profile=balanced + powersave/balance_power, while every E6 step ran on AC + performance/performance/performance. campaign.py checked background CPU but not power; it now refuses to start on battery.
+Run (AC, boost on, 4 blocks x 6 runs, order balanced / custom(performance) / balanced / custom(performance)): powerprofilesctl "performance" puts lenovo-wmi-gamezone in "custom" (firmware "performance" auto-switches to custom on this machine). Before blocks 2-4 the author reset the custom CPU thermal limit from 85 C to its firmware default 100 C (sudo); all custom PPT limits already equal defaults (PL1 54, PL2 54, PL3 65, CL 45). Whether the defaults equal the firmware's internal performance-mode limits could not be read and is assumed. Block 1 ran before the thermal-limit change; Tctl never exceeded 63 C, so the limit was not reached.
+Result: medians 5,035 (performance/custom) vs 4,889 (balanced) req/s; all runs -278 [-945,+390]; 2 performance runs at half speed (23:19, cause unknown); without them (post hoc) +171 [+114,+228] (+3.5%). Power profile explains a few percent, not the 27%. Remaining untested candidates from the snapshots: Docker 29.8.2 -> 29.9.0, kernel package 7.2.9-1 -> 7.2.9-2.
+Data collection frozen after this run (reviewer advice).

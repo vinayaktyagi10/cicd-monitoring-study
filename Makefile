@@ -3,7 +3,7 @@ SCRIPTS := experiments/scripts
 CAMPAIGN ?= $(lastword $(sort $(wildcard experiments/replication/*)))
 
 .PHONY: help venv test tables stats validate figures verify-figures paper reproduce \
-        image campaign campaign-cicd validate-campaign overhead e6-prose stats-prose replication-check grafana-figure
+        image campaign campaign-cicd validate-campaign overhead e6-prose e7-prose stats-prose replication-check grafana-figure
 
 help:
 	@echo "No Docker needed (derive everything from raw data):"
@@ -50,7 +50,11 @@ overhead: venv
 	$(PY) $(SCRIPTS)/analyze_overhead.py experiments/raw/exp6_overhead_loadgen4.csv --outdir experiments/results/overhead_loadgen4
 	$(PY) $(SCRIPTS)/analyze_overhead.py experiments/raw/exp6_overhead_keepalive.csv --outdir experiments/results/overhead_keepalive
 	$(PY) $(SCRIPTS)/analyze_overhead.py experiments/raw/exp6_overhead_keepalive_loadgen4.csv --outdir experiments/results/overhead_keepalive_loadgen4
-	git diff --exit-code --stat -- 'experiments/results/overhead*/*.csv' && echo "E6 results identical to committed tables"
+	$(PY) $(SCRIPTS)/analyze_loaded.py experiments/raw/exp7_loaded_overhead.csv --outdir experiments/results/loaded_overhead
+	git diff --exit-code --stat -- 'experiments/results/overhead*/*.csv' experiments/results/loaded_overhead && echo "E6/E7 results identical to committed tables"
+
+e7-prose: venv
+	cd $(SCRIPTS) && ../../$(PY) e7_prose.py
 
 e6-prose: venv
 	cd $(SCRIPTS) && ../../$(PY) e6_prose.py --campaign ../
@@ -61,7 +65,7 @@ stats-prose: venv
 replication-check: validate-campaign stats-prose
 	git diff --exit-code --stat -- $(CAMPAIGN)/results/original_vs_replication.csv paper/tables/replication.tex paper/tables/reproducibility.tex paper/tables/thp_diag.tex && echo "replication table identical to committed"
 
-reproduce: test tables overhead e6-prose stats validate replication-check verify-figures paper
+reproduce: test tables overhead e6-prose e7-prose stats validate replication-check verify-figures paper
 
 image:
 	docker compose build app

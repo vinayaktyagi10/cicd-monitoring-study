@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Generates Figures 4-12 directly from experiments/results/*.csv,
+"""Generates Figures 4-13 directly from experiments/results/*.csv,
 experiments/raw/*.csv and the replication campaign's raw/ — no hand-entered
 numbers. Run with:
     .venv/bin/python paper/figures/generate_figures.py [--outdir DIR]
@@ -300,6 +300,31 @@ def fig12_overhead_throughput():
     savefig(fig, "fig12_overhead_throughput")
 
 
+# ---------------------------------------------------------------------------
+# Figure 13 — Experiment 7: monitoring penalty against background CPU load
+# ---------------------------------------------------------------------------
+def fig13_loaded_penalty():
+    import analyze_loaded as al
+    rows = al.load(os.path.join(RAW, "exp7_loaded_overhead.csv"))
+    con = al.contrasts(al.group(rows))
+    ach = {a["level"]: a["host_busy_cores"] for a in al.achieved(rows)}
+    fig, ax = plt.subplots(figsize=(5, 2.8))
+    x = [ach[c["level"]] for c in con]
+    y = [c["penalty"] for c in con]
+    err = [[c["penalty"] - c["lo"] for c in con], [c["hi"] - c["penalty"] for c in con]]
+    ax.axhline(0, color="grey", lw=0.8)
+    ax.errorbar(x, y, yerr=err, fmt="o", ms=6, capsize=3, color=BAR_COLOR, lw=1.5)
+    for c, xi in zip(con, x):
+        ax.annotate(f"{c['level']}%", (xi, c["hi"]), textcoords="offset points", xytext=(0, 4),
+                    ha="center", fontsize=8, color="#444444")
+    ax.set_xlabel("Measured host CPU during load (busy cores of 16)")
+    ax.set_ylabel("Docker $-$ full stack\n(req/s, mean, 95% CI)")
+    ax.set_xlim(0, 16)
+    ax.set_ylim(min(c["lo"] for c in con) - 60, max(c["hi"] for c in con) + 90)
+    savefig(fig, "fig13_loaded_penalty")
+
+
+
 if __name__ == "__main__":
     ap = argparse.ArgumentParser()
     ap.add_argument("--outdir", default=HERE)
@@ -314,3 +339,4 @@ if __name__ == "__main__":
     fig10_monitoring_overhead()
     fig11_timewait()
     fig12_overhead_throughput()
+    fig13_loaded_penalty()

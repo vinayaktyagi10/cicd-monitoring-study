@@ -58,3 +58,16 @@ Command: `/home/vinayak/Research/cicd-monitoring-study/.venv/bin/python /home/vi
 Exit code: 0, duration 73.3 min, background CPU before start 0.20 cores
 Log: logs/e6ka.log
 
+## 2026-10-14T10:23:35+05:30 - e7: NOT RUN
+Preconditions failed: background CPU 0.70 cores > --max-busy-cores 0.5
+
+## 2026-10-14T10:25:24+05:30 - e7
+Command: `/home/vinayak/Research/cicd-monitoring-study/.venv/bin/python /home/vinayak/Research/cicd-monitoring-study/experiments/scripts/exp7_loaded_overhead.py --runs 15 --out /home/vinayak/Research/cicd-monitoring-study/experiments/replication/2026-10-06_1653/raw/exp7_loaded_overhead.csv`
+Exit code: 1, duration 0.6 min, background CPU before start 0.96 cores
+Log: logs/e7.log
+
+## 2026-10-15T21:40:09+05:30 - e7
+Command: `/home/vinayak/Research/cicd-monitoring-study/.venv/bin/python /home/vinayak/Research/cicd-monitoring-study/experiments/scripts/exp7_loaded_overhead.py --runs 15 --out /home/vinayak/Research/cicd-monitoring-study/experiments/replication/2026-10-06_1653/raw/exp7_loaded_overhead.csv`
+Exit code: 0, duration 73.7 min, background CPU before start 0.72 cores
+Log: logs/e7.log
+

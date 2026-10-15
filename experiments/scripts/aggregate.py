@@ -44,7 +44,8 @@ ORIGINAL_PASS_ROWS = {
 # Summarized by analyze_overhead.py instead: its cells split pinned and unpinned runs,
 # which a per-case mean would merge.
 SKIP = {"exp6_overhead", "exp6_overhead_loadgen4", "exp6_overhead_keepalive",
-        "exp6_overhead_keepalive_loadgen4", "diag_timewait", "diag_thp"}
+        "exp6_overhead_keepalive_loadgen4", "diag_timewait", "diag_thp",
+        "exp7_loaded_overhead", "diag_power"}
 
 
 def to_float(v):
