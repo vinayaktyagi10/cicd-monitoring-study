@@ -25,7 +25,7 @@ through that aggregation step — nothing is entered by hand.
 | `scripts/diag_timewait.py` | E6 diagnostic | Runs the per-request and keep-alive load clients in turn (3 repetitions each, app-only stack, TIME_WAIT drained before each) and samples throughput, TIME_WAIT sockets and docker-proxy CPU every second for 40 s (explains the per-request throughput collapse) |
 | `scripts/e6_prose.py` | — | Recomputes every E6 number quoted in `paper.tex` from `raw/` and checks each appears verbatim (`make e6-prose`) |
 | `scripts/replication_table.py` | — | Renders the original-vs-replication CSV into the LaTeX table `paper/tables/replication.tex` |
-| `scripts/reproducibility_table.py` | — | Classifies every finding as reproduces / environment-dependent / not supported from the comparison CSV, raw files and E6 results; writes `paper/tables/reproducibility.tex` (`tests/test_reproducibility_table.py`) |
+| `scripts/reproducibility_table.py` | — | Classifies every finding as reproduced / environment-sensitive / not supported by replication / inconclusive from the comparison CSV, raw files and E6/E7 results; writes `paper/tables/reproducibility.tex` (`tests/test_reproducibility_table.py`) |
 | `scripts/stats_prose.py` | — | Recomputes the statistical-methods numbers quoted in the paper (normality rejections, test agreement, Holm correction) and checks each appears verbatim (`make stats-prose`) |
 | `scripts/diag_thp.py` | E4 diagnostic | Standalone 150 MB container probe: zero-filled vs non-zero allocation, default THP vs THP disabled for the process; records OOM kills and the kernel's underused-THP split counter (explains the zero-fill result) |
 | `scripts/thp_table.py` | — | Renders `raw/diag_thp.csv` into `paper/tables/thp_diag.tex` |
