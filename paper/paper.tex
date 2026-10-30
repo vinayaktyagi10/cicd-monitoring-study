@@ -39,12 +39,16 @@ than a 0.11\,s load produced an apparent CPU-contention effect that kernel count
 not confirm;
 (P4)~\emph{absolute numbers do not travel}: most values moved by 12--173\% across the
 reinstall, and by 27\% between two later sessions after routine package updates.
-What held: the ordering of deployment times, the cost of re-running build and test on
-every CI/CD deployment, recovery time after a container kill, and an OOM kill when memory
+What held: the ordering of deployment times and the cost of re-running build and test on
+every CI/CD deployment (both largely independent of the local software environment),
+recovery time after a container kill, and an OOM kill when memory
 is resident. The first campaign's explanation of a throughput drop as CPU contention
 between monitoring and application did not hold and is withdrawn: with a stable client
 the monitoring stack used about 0.03 cores and cost at most about 1.4\% of throughput,
-and the cost did not grow under background CPU load. For each pitfall we give the symptom, mechanism, evidence
+and the cost did not grow under background CPU load. An interleaved re-run of the
+original experiment, with an identical-configuration control, found no monitoring effect
+but a downward drift of about 16\% over 11 minutes, enough to produce the original drop
+under a fixed case order. For each pitfall we give the symptom, mechanism, evidence
 and a check that prevents it. Raw data and a one-command rebuild of every table and
 figure are published at \url{https://github.com/vinayaktyagi10/cicd-monitoring-study}.
 \end{abstract}
@@ -149,7 +153,7 @@ Pitfall & Symptom here & Mechanism & How it was exposed & Check that prevents it
 P1 Zero-filled memory stress &
 0/20 OOM kills on the replication host, 20/20 originally &
 THP shrinker splits mostly-zero huge pages and frees them under cgroup pressure &
-\texttt{memory.events} at the limit with no OOM kill; THP $\times$ fill diagnostic (Table~\ref{tab:thp}) &
+\texttt{memory.events} at the limit with no OOM kill; THP $\times$ fill diagnostic and stride probe (Tables~\ref{tab:thp}, \ref{tab:thpstride}) &
 Write non-zero data to every page; report kernel, THP policy and fill pattern \\
 P2 Per-request load client &
 Throughput varied three-fold between runs and tracked docker-proxy CPU &
@@ -165,7 +169,7 @@ P4 Absolute numbers across environments &
 Deployment, throughput and detection times moved 12--173\% after a reinstall; 27\% between two later sessions &
 Kernel, Docker version and distribution defaults changed on the same hardware &
 Same-hardware replication with a verdict rule fixed in advance (Table~\ref{tab:reproducibility}); power-profile test explains a few percent of the 27\% &
-Record package versions and power state per run; pin versions; compare within one session \\
+Record package versions and power state per run; pin versions; randomize case order; run an A/A comparison for the noise floor \\
 \bottomrule
 \end{tabular}
 \end{table*}
@@ -201,7 +205,7 @@ non-automated baseline.
 \setlength{\tabcolsep}{4pt}
 \begin{tabular}{@{}>{\raggedright\arraybackslash}p{2.5cm}>{\raggedright\arraybackslash}p{1.6cm}>{\raggedright\arraybackslash}p{1.6cm}>{\raggedright\arraybackslash}p{1.7cm}>{\raggedright\arraybackslash}p{3.6cm}>{\raggedright\arraybackslash}p{5.6cm}@{}}
 \toprule
-\textbf{Paper} & \textbf{CI/CD} & \textbf{Containers} & \textbf{Monitoring} & \textbf{Metrics} & \textbf{Limitation (relative to this study)} \\
+\textbf{Paper} & \textbf{CI/CD} & \textbf{Containers} & \textbf{Monitoring} & \textbf{Metrics} & \textbf{Scope (relative to this study)} \\
 \midrule
 Felter et al.\ 2015~\cite{felter2015} & No & Docker vs.\ KVM & No &
 CPU, memory, network, disk microbenchmarks; MySQL/Redis throughput &
@@ -246,14 +250,36 @@ MTTD and MTTR are the container-level analogues, measured in seconds on a
 single service rather than as organization-level outcomes. Container
 background is covered by Bernstein~\cite{bernstein2014}.
 
-Two studies address measurement methodology rather than any one tool. Mytkowicz et
+Earlier container work includes Xavier et
+al.~\cite{xavier2013}, who found container-based virtualization close to native for
+HPC workloads; like Felter et al., it measures the container layer only.
+
+Several studies address measurement methodology rather than any one tool. Georges et
+al.~\cite{georges2007} showed that common Java benchmarking practice can mislead because
+the data analysis is not statistically rigorous, and advocated confidence intervals over
+best-of-$n$ summaries. Kalibera and Jones~\cite{kalibera2013} derived how to allocate
+repetitions across levels of a non-deterministic experiment for a given time budget, and
+Hoefler and Belli~\cite{hoefler2015} surveyed 120 papers from three conferences and found
+reporting and experimental-design practice lacking. Papadopoulos et
+al.~\cite{papadopoulos2021} proposed eight principles for measuring and reporting cloud
+performance and found that few published studies follow them. Abedi and
+Brecht~\cite{abedi2017} argue that randomized multiple interleaved trials support
+repeatable comparisons when conditions outside the experimenter's control vary, and
+Laaber et al.~\cite{laaber2019} found that running test and control on the same instances
+in randomized order detects slowdowns of 10\% or less. Variability itself is documented
+for public clouds by Leitner and Cito~\cite{leitner2016} and for big-data workloads on
+cloud networks by Uta et al.~\cite{uta2020}; Curtsinger and Berger~\cite{curtsinger2013}
+attack measurement bias from memory layout by randomizing it. Two further studies are
+the closest in spirit to ours. Mytkowicz et
 al.~\cite{mytkowicz2009} showed that setup details that look irrelevant, such as the size
 of the UNIX environment and the link order, bias benchmark results enough to reverse a
 conclusion, and that this bias goes unnoticed unless the setup is varied. Maricq et
 al.~\cite{maricq2018} measured performance variability across many nominally identical
 servers of a shared testbed and gave guidance on how many repetitions a claim needs and
 on using nonparametric confidence intervals. Both concern general benchmarking: the
-benchmark binary, the hardware and run-to-run variance.
+benchmark binary, the hardware and run-to-run variance. The interleaved-trial and
+A/A designs of Abedi and Brecht and of Laaber et al.\ are what Experiment~2 lacked and
+what Section~\ref{sec:contention} adds.
 
 \subsection{Positioning}
 Each tool evaluation above reports a single measurement campaign, and none repeats its
@@ -312,9 +338,7 @@ Grafana instance provisioned with Prometheus as its data source.
   \draw[arr] (cadv) -- (prom);
   \draw[arr] (prom) -- (graf);
 \end{tikzpicture}
-\caption{Overall pipeline architecture: source control triggers automated
-build and test, which produces the container image deployed alongside the
-observability stack.}
+\caption{Pipeline architecture: push, build and test, image, and deployment beside the observability stack.}
 \label{fig:arch}
 \end{figure}
 
@@ -330,10 +354,10 @@ Table~\ref{tab:deploy}, not a simplified stand-in.
 
 Fig.~\ref{fig:grafana} shows the resulting Grafana dashboard under live
 load: request rate and p95 latency by endpoint, the application's
-self-reported process CPU\% and memory, and the Prometheus \texttt{up}
-target-health indicator, all auto-provisioned (no manual dashboard
-configuration) and updating in real time from the same Prometheus instance
-used throughout the experiments.
+self-reported process CPU\% and memory, plus a Prometheus \texttt{up}
+target-health panel (not shown; it reported \texttt{up=1}). All panels are
+auto-provisioned, with no manual dashboard configuration, and update in real time from
+the same Prometheus instance used throughout the experiments.
 
 \begin{figure*}[t]
 \centering
@@ -341,14 +365,7 @@ used throughout the experiments.
 \begin{minipage}{0.49\textwidth}\includegraphics[width=\linewidth]{fig3_grafana_latency_p95.png}\end{minipage}\\[4pt]
 \begin{minipage}{0.49\textwidth}\includegraphics[width=\linewidth]{fig3_grafana_cpu.png}\end{minipage}\hfill
 \begin{minipage}{0.49\textwidth}\includegraphics[width=\linewidth]{fig3_grafana_memory.png}\end{minipage}
-\caption{Grafana dashboard panels under a scripted live workload (last 5 minutes),
-auto-provisioned against the Prometheus datasource: request rate and p95
-latency by endpoint (top), application process CPU and memory (bottom). The
-target-health panel (not shown) reported \texttt{up=1}. Each panel was captured
-separately from the running stack by \texttt{capture\_grafana.py}. Unlike
-Figs.~\ref{fig:deploytime}--\ref{fig:loaded} these are screenshots of live
-state and cannot be reproduced pixel for pixel; the Prometheus series behind
-each panel for this capture are saved in \texttt{experiments/raw/grafana\_panels.json}.}
+\caption{Grafana panels under a scripted workload (last 5\,min): request rate and p95 latency (top), process CPU and memory (bottom). Live screenshots from \texttt{capture\_grafana.py}, not pixel-reproducible; series in \texttt{experiments/raw/grafana\_panels.json}.}
 \label{fig:grafana}
 \end{figure*}
 
@@ -414,7 +431,8 @@ dependencies and full inspectability.
 Five experiments were run, summarized in Table~\ref{tab:scenarios}, followed
 during validation by a sixth that re-measures monitoring overhead under
 controlled load (Section~\ref{sec:e6method}) and a seventh that repeats that
-measurement under background CPU load (Section~\ref{sec:e7results}). Each is
+measurement under background CPU load (Section~\ref{sec:e7results}), and an
+interleaved repeat of Experiment~2 (Experiment~2i, Section~\ref{sec:contention}). Each is
 described in more detail in the corresponding results subsection. A
 dedicated script per experiment (\texttt{exp1\_deploy.py} through
 \texttt{exp5\_failure\_recovery.py}) brings the relevant Docker Compose
@@ -441,6 +459,7 @@ Docker (20), Docker+Prometheus (20), Docker+Prometheus+Grafana (20) \\
 5 & Failure detection \& recovery & 20 \\
 6 & Monitoring overhead vs.\ host CPU vs.\ throughput (validation) & 4 cases (20 each) + pinned arm, two load clients \\
 7 & Monitoring overhead under background CPU load (validation) & 2 cases $\times$ 4 load levels (15 each) \\
+2i & Exp.~2 interleaved with an A/A arm (validation) & 4 cases $\times$ 20 blocks, shuffled \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -472,7 +491,11 @@ each of 20 runs per case, a fixed load (300 concurrent requests to
 \texttt{/health}, concurrency 10) is issued while \texttt{docker stats} is
 polled every second for every container in that case, giving per-container
 mean CPU\% and memory alongside the load test's own throughput, mean/p95
-latency, and error rate.
+latency, and error rate. The three cases ran in the fixed order Docker,
++Prometheus, +Grafana, each on one stack brought up once and loaded 20 times in
+a row; cases were not interleaved or randomized, so a case is confounded with its
+position in the session and the 20 runs are repeated loads on one stack
+instance (Section~\ref{sec:contention}).
 
 \subsection{CPU stress detection (Experiment 3)}
 Eight threads concurrently flood \texttt{/cpu} (an 8-million-iteration
@@ -525,7 +548,7 @@ Every interval and test below is computed from the per-run CSV rows, with
 sample statistics (denominator $n{-}1$) and a two-sided $\alpha{=}0.05$, by
 \texttt{stats\_lib.py} (unit-tested against \texttt{scipy}) and
 \texttt{validate.py}. Table~\ref{tab:stats} lists each method with the reason
-for choosing it and its main limit. We report intervals and effect sizes first
+for choosing it and its main limit. Following Georges et al.~\cite{georges2007} and Hoefler and Belli~\cite{hoefler2015}, we report intervals and effect sizes first
 and $p$-values second: with 20 runs per cell a $p$-value alone says little
 about whether a difference matters.
 The Experiment~2 comparisons in Section~\ref{sec:results} quote Cohen's $d$
@@ -548,7 +571,7 @@ Standardized effect size & Hedges' $g$ with a normal-approximation interval & Pu
 Success rates (7/8, 20/20) & Wilson score interval & Stays inside $[0,1]$ and behaves at small $n$ and at 0 or 1, where the Wald interval fails & Describes the binomial rate only \\
 Throughput against CPU & Pearson $r$ with a Fisher-$z$ interval & Measures how strongly run-level throughput tracks host load & Assumes linearity; sequential runs may be autocorrelated \\
 Contention tests (pinning in Exp.~6, background load in Exp.~7) & Difference-in-differences with a percentile bootstrap (10{,}000 resamples, fixed seed) & A four-group contrast with no closed-form interval; the bootstrap assumes no distribution & Unreliable tails at 10--20 runs per group \\
-Replication verdict & Original mean inside the replication's 95\% interval & Fixed before any replication data existed, so it could not be tuned to the result & Collapses when the replication has almost no variance \\
+Replication verdict & Original mean inside the replication's 95\% interval & Fixed before any replication data existed, so it could not be tuned to the result & Ignores the original's own variance and collapses when the replication has almost no variance; not an equivalence test \\
 \bottomrule
 \end{tabular}
 \end{table*}
@@ -629,11 +652,7 @@ Full pipeline & 1.552 & 0.031 & 1.485 & 1.636 & 20 (0) \\
 \begin{figure}[t]
 \centering
 \includegraphics[width=\columnwidth]{fig4_deploy_time.pdf}
-\caption{Deployment time by configuration (log scale; error bars are one
-standard deviation). Docker adds a small fixed cost over the raw process;
-the full monitoring stack adds almost nothing further on top of Docker;
-CI/CD dominates because it re-runs the full build-and-test cycle rather
-than reusing a pre-built image.}
+\caption{Deployment time by configuration (log scale; error bars: one SD).}
 \label{fig:deploytime}
 \end{figure}
 
@@ -645,7 +664,7 @@ the other three and would otherwise flatten them to indistinguishable bars.
 Table~\ref{tab:resource} reports the application container's own resource use
 and the load test's response characteristics; Table~\ref{tab:overhead}
 isolates the monitoring stack's own resource draw. Zero errors were observed
-across all 60 runs (180$\times$300 = 18{,}000 requests). Point estimates for
+across all 60 runs (60$\times$300 = 18{,}000 requests). Point estimates for
 throughput fall as monitoring is added (2737 $\to$ 2641 $\to$ 2449 req/s,
 Docker $\to$ +Prometheus $\to$ +Grafana); a Welch's $t$-test (unequal
 variances, $n{=}20$ per case, computed directly from the raw per-run CSV
@@ -698,31 +717,21 @@ are the application container's; req/s is throughput.
 \begin{figure}[t]
 \centering
 \includegraphics[width=\columnwidth]{fig5_cpu_utilization.pdf}
-\caption{Application container CPU utilization across the three monitoring
-cases (Table~\ref{tab:resource}, column 1). CPU\% \emph{falls} as more
-monitoring containers are added. This is a sampling artifact, not a CPU effect
-(Section~\ref{sec:p3}).}
+\caption{Application CPU\% by monitoring case. The fall is a sampling artifact (Section~\ref{sec:p3}).}
 \label{fig:cpuutil}
 \end{figure}
 
 \begin{figure}[t]
 \centering
 \includegraphics[width=\columnwidth]{fig6_memory_utilization.pdf}
-\caption{Application container memory across the three monitoring cases
-(Table~\ref{tab:resource}, column 2; note the narrow y-axis range). Memory
-is essentially flat at $\approx$36\,MB regardless of how much monitoring
-runs alongside the application — unlike CPU, memory is not shared/contended
-the same way across containers on this host.}
+\caption{Application memory by monitoring case (narrow y-axis).}
 \label{fig:memutil}
 \end{figure}
 
 \begin{figure}[t]
 \centering
 \includegraphics[width=\columnwidth]{fig7_response_latency.pdf}
-\caption{Mean and p95 request latency across the three monitoring cases
-(Table~\ref{tab:resource}, columns 3-4). Both rise slightly as monitoring
-is added, but none of the pairwise differences is significant
-(Section~\ref{sec:results}), so this is a directional observation only.}
+\caption{Mean and p95 latency by monitoring case; no pairwise difference is significant.}
 \label{fig:latency}
 \end{figure}
 
@@ -741,7 +750,10 @@ Grafana & --- & --- & 0.06 & 60.70 \\
 \bottomrule
 \end{tabular}
 \\[2pt]
-\footnotesize Mean, $n=20$ runs per column.
+\footnotesize Mean, $n=20$ runs per column, from \texttt{docker stats}. Kernel
+counters in Experiment~6 gave 0.027 cores for cAdvisor and 0.005 for Prometheus, about
+half of these CPU\% readings, and the replication read cAdvisor at 2.4\%; we do not know
+which instrument is right for the original host.
 \end{table}
 
 Table~\ref{tab:overhead} is visualized in Fig.~\ref{fig:overhead}, alongside
@@ -754,9 +766,11 @@ self-reported CPU utilization 96.6\% (std 10.0, effectively pegged at one
 full core, consistent with CPython's GIL limiting a single process to
 $\approx$100\% of one core regardless of thread count). The detection floor
 is set by the 2s Prometheus scrape interval combined with the 0.5s poll
-granularity used to observe it; the long right tail (up to 18.58s) reflects
-run-to-run variance in how quickly the OS scheduler favoured the eight
-stress threads over the sampling thread, not a monitoring-pipeline delay.
+granularity used to observe it. We did not test what causes the long right tail (up
+to 18.58s); one candidate is the application's in-process sampling thread being
+delayed by the stress threads. The signal is the application's own gauge, read through
+Prometheus, so these are detection times for an application-level signal, and the
+memory-stress experiment below uses \texttt{docker inspect}, not Prometheus.
 
 An initial design used mean \texttt{/health} latency as the detection
 signal instead of process CPU\%; it was rejected after finding it barely
@@ -817,6 +831,29 @@ the host's \texttt{thp\_underused\_split\_page} counter delta per run.}
 \input{tables/thp_diag}
 \end{table}
 
+\textbf{Prediction test.} The kernel documentation calls a huge page underused when its
+zero-filled pages exceed \texttt{khugepaged/max\_ptes\_none}~\cite{kernelthp}, which reads
+409 on this host. A 2\,MiB page has 512 subpages, so writing one non-zero byte into every
+$k$-th 4\,KiB page leaves $512-512/k$ zero subpages. The rule predicts an OOM kill for
+$k\le4$ (at most 384 zero subpages), survival for $k\ge6$ (at least 427), and a boundary
+case at $k{=}5$ (410). Table~\ref{tab:thpstride} (\texttt{diag\_thp\_stride.py}, 5 runs per row,
+default THP) matches: strides 2 and 4 were killed in 5/5 runs with at most one split, the
+all-zero allocation and strides 6 and 8 survived all 20 blocks in 5/5 runs with 149--171
+splits, and the boundary row stopped every run after 12--13 blocks, 4/5 flagged as
+OOM-killed by Docker (we did not investigate the fifth). This ran on kernel 7.3.0, later
+than the replication's 7.2.9 whose \texttt{max\_ptes\_none} we did not record, and the
+2\,MiB alignment of each allocation is not controlled, which blurs the boundary.
+
+\begin{table}[t]
+\centering
+\caption{THP stride probe: one non-zero byte in every $k$-th page, 5 runs per row,
+default THP, 150\,MB limit, \texttt{max\_ptes\_none}\,=\,409. \emph{Zero pages} is per
+2\,MiB page.}
+\label{tab:thpstride}
+\small
+\input{tables/thp_stride}
+\end{table}
+
 \textbf{What this means.} The OOM-kill result is conditional on the memory being
 genuinely resident and non-reclaimable. We observed the zero-fill escape on one kernel
 (7.2.9, THP \texttt{always}, \texttt{shrink\_underused=1}) on one machine; whether other
@@ -832,8 +869,9 @@ differed between the original and replication runs. A distribution default of
 \texttt{madvise}, under which a process that does not request huge pages behaves like
 the ``disabled'' rows, would be consistent with the original result, but we did not test
 it. We showed that process-level THP is sufficient to flip the outcome here; we did not
-toggle the host-wide \texttt{shrink\_underused} setting (it needs root), and we did
-not test other kernel versions.
+toggle the host-wide \texttt{shrink\_underused} or \texttt{max\_ptes\_none} setting (it
+needs root), and the stride probe ran on a later kernel (7.3.0) than the replication
+(7.2.9), so we have not shown that the replication kernel used the same threshold.
 
 \subsection{Failure detection and recovery (RQ2, RQ4)}
 All 20 induced container failures (\texttt{docker kill}) were detected by
@@ -845,7 +883,8 @@ container restart to health-check success --- was consistently
 $\approx$2.0s (std 0.006s, i.e.\ effectively deterministic), which is
 essentially Uvicorn's own process startup time inside the container: MTTR
 here is dominated by application boot, not by any property of the
-monitoring stack. From this point on, MTTD and MTTR are used throughout in
+monitoring stack. MTTD is faster and tighter than MTTR in every run, and neither shows a trend over the 20 runs.
+From this point on, MTTD and MTTR are used throughout in
 place of "detection time" and "recovery time," consistent with the
 CPU-stress MTTD reported above and with
 Figs.~\ref{fig:failuretimeline}--\ref{fig:mttdmttr}.
@@ -853,36 +892,21 @@ Figs.~\ref{fig:failuretimeline}--\ref{fig:mttdmttr}.
 \begin{figure}[t]
 \centering
 \includegraphics[width=\columnwidth]{fig8_failure_timeline.pdf}
-\caption{MTTD and MTTR across all 20 failure-injection runs. MTTD (blue) is
-consistently faster and tighter than MTTR (orange) across every run, and
-both are stable run-to-run, with no trend over the sequence of 20 trials, so
-within this campaign they do not depend on run order. Across environments MTTR
-reproduced but failure MTTD did not ($+173$\%; Table~\ref{tab:reproducibility}).}
+\caption{MTTD and MTTR over the 20 failure-injection runs.}
 \label{fig:failuretimeline}
 \end{figure}
 
 \begin{figure}[t]
 \centering
 \includegraphics[width=\columnwidth]{fig9_mttd_mttr.pdf}
-\caption{Mean time to detect (MTTD) a CPU-stress event, MTTD for a killed
-container, and mean time to recover (MTTR) after restart, with error bars
-(one standard deviation), computed from the same raw detection/recovery
-times reported in Section~\ref{sec:results} (original run). Here a killed container
-is detected faster than CPU saturation; in the replication the ordering inverted
-(2.41\,s for CPU stress, 3.14\,s for failure), so we draw no conclusion from the
-comparison.}
+\caption{MTTD (CPU stress), MTTD (killed container) and MTTR, mean $\pm$ one SD, original run.}
 \label{fig:mttdmttr}
 \end{figure}
 
 \begin{figure}[t]
 \centering
 \includegraphics[width=\columnwidth]{fig10_monitoring_overhead.pdf}
-\caption{Monitoring stack containers' own CPU draw (Table~\ref{tab:overhead}).
-cAdvisor dominates the monitoring stack's own overhead at $\approx$6\% CPU
-in both cases; Prometheus and Grafana are comparatively cheap
-($<$1\% each). This is the overhead the monitoring \emph{tooling} itself
-pays; the follow-up measurement (Section~\ref{sec:e6results}) found the
-monitoring containers drew only $\approx$0.03 cores in total.}
+\caption{CPU draw of the monitoring containers (Table~\ref{tab:overhead}), from \texttt{docker stats}.}
 \label{fig:overhead}
 \end{figure}
 
@@ -914,14 +938,17 @@ effect at about 1.4\%.
 \begin{figure}[t]
 \centering
 \includegraphics[width=\columnwidth]{fig11_timewait_collapse.pdf}
-\caption{Diagnostic for the per-request client (3 repetitions per client):
-throughput collapses as TIME\_WAIT sockets pass the ephemeral port
-range and docker-proxy system CPU rises; the keep-alive client is flat.}
+\caption{Per-request client: throughput collapses as TIME\_WAIT passes the port range; the keep-alive client is flat (3 repetitions each).}
 \label{fig:timewait}
 \end{figure}
 
 The keep-alive client is stable (within-case variation at most 2.3\%) and
-is the one we use to bound monitoring overhead. Against Docker alone, the
+is the one we use to bound monitoring overhead. It is not the bottleneck: the
+application container used 1.03--1.04 cores, a saturated single Uvicorn process,
+the load generator about 0.54 cores, and four load-generator processes raised
+Docker-only throughput by only about 3.5\% (6{,}788 against 6{,}559\,req/s). The
+bound therefore applies to a closed-loop, server-saturated configuration; we did
+not run an open-loop fixed-rate test. Against Docker alone, the
 full stack (+Grafana) differed by $-62$\,req/s, 95\% CI $[-149, +25]$
 ($-0.9$\%), Hedges' $g{=}-0.45$ $[-1.07, +0.18]$, and no monitored case moved
 throughput by more than 0.9\% (Fig.~\ref{fig:e6throughput}). The monitoring
@@ -931,7 +958,8 @@ difference-in-differences $+8$\,req/s, 95\% CI $[-94, +105]$, so it
 neither supports nor excludes a contention effect of that size. One
 configuration does detect a difference: against Docker alone, +Grafana with
 four load-generator processes ($-1.4$\%, 95\% CI $[-159, -36]$\,req/s) is lower, and
-the interval excludes zero (10 runs per case). We did
+the interval excludes zero (10 Docker-only and 9 +Grafana runs; one +Grafana run is
+missing from the log). We did
 not correct for the number of contrasts examined, and the 20-run
 and 10-run designs were not powered for effects this small. We therefore
 report a bound, not an absence: on this host, with a client that does not
@@ -942,10 +970,7 @@ identify its mechanism.
 \begin{figure}[t]
 \centering
 \includegraphics[width=\columnwidth]{fig12_overhead_throughput.pdf}
-\caption{Experiment~6 throughput per case for both clients (mean, 95\% CI,
-unpinned runs, one load-generator process). The per-request client is low and
-variable because of TIME\_WAIT exhaustion; the keep-alive client shows
-no monitored case more than 0.9\% from Docker-only.}
+\caption{Experiment~6 throughput per case, both clients (mean, 95\% CI, unpinned, one load generator).}
 \label{fig:e6throughput}
 \end{figure}
 
@@ -969,9 +994,7 @@ and adds nothing finer than Experiment~6.
 \begin{figure}[t]
 \centering
 \includegraphics[width=\columnwidth]{fig13_loaded_penalty.pdf}
-\caption{Experiment~7: monitoring penalty (Docker-only minus full-stack throughput)
-against host CPU measured during load, labelled by background target; all intervals
-include zero and show no trend.}
+\caption{Experiment~7: monitoring penalty against measured host CPU; all intervals include zero.}
 \label{fig:loaded}
 \end{figure}
 
@@ -984,7 +1007,45 @@ by host-level CPU contention: the monitoring stack competes with the application
 for cores, so the application is scheduled less. We no longer hold this as a
 supported conclusion.
 
-\textbf{What contention predicts, and what Experiment~6 found.}
+\textbf{An alternative the original design cannot exclude.} Experiment~2 ran its cases in
+a fixed order on one stack instance each, so the monotone fall in throughput is
+also what a drift over the session (thermal state, background activity) would
+produce. The raw file holds two further passes of the same script on the same
+installation, not used for any table. The second ran straight after other
+experiments: 14 of its 40 monitored runs had request errors, and the means were
+2895, 2597 and 1799\,req/s. The third ran alone, with no errors, and gave 1660,
+1648 and 1595\,req/s ($-0.7$\% and $-3.9$\% against Docker), a Docker-only level
+40\% below the reported pass on that same installation. The reported pass is the
+first of three, kept because it was the pre-planned one, not because it was
+typical. Across passes the ordering Docker $>$ +Prometheus $>$ +Grafana
+recurs, but its size ranges from $-3.9$\% to $-10.5\%$ in the clean passes, and
+Experiment~2 cannot separate monitoring from session position.
+
+\textbf{Interleaved re-run (Experiment~2i).} To separate the two we repeated
+Experiment~2's load with the three cases plus a second, identical Docker-only arm
+(an A/A arm), a fresh stack for every run, and the four cases in shuffled order within
+each of 20 blocks (80 runs, 10.6\,min). It ran on a third software state (kernel 7.3.0,
+Docker 29.9.2, balanced power profile on AC power), so only its within-session contrasts
+are interpretable. Throughput was 2{,}707, 2{,}629 (A/A), 2{,}689 and 2{,}662\,req/s for
+Docker, A/A, +Prometheus and +Grafana, with no request errors. Against Docker alone, the
+A/A arm differed by $-78$\,req/s, 95\% CI $[-254, +99]$ ($-2.9$\%), +Prometheus by
+$-18$\,req/s, 95\% CI $[-175, +139]$ ($-0.7$\%) and +Grafana by $-45$\,req/s, 95\% CI
+$[-219, +128]$ ($-1.7$\%); against both Docker-only arms pooled, +Grafana differed by
+$-7$\,req/s, 95\% CI $[-169, +156]$. The identical-configuration arm moves as far as either
+monitored case, so no monitoring effect is distinguishable from this design's noise floor.
+Throughput drifted down across the session by $-21.8$\,req/s per block, 95\% CI
+$[-31.2, -12.4]$, about 16\% over the 20 blocks, with no effect of position inside a block
+($+33$\,req/s per position, 95\% CI $[-21, +87]$). Assigning the same runs to a fixed order
+after the fact (Docker and A/A from the first seven blocks, +Prometheus from the next
+seven, +Grafana from the last six; an illustration chosen post hoc, not a test) gives
+2{,}762, 2{,}728 and 2{,}383\,req/s, a $-13.7$\% fall to the full stack, the size of the
+original $-10.5$\%. The original drop is therefore what a fixed case order produces under
+session drift. We cannot show that the original session drifted by the same amount.
+
+\textbf{What contention predicts, and what Experiment~6 found.} Contention was
+also a weak hypothesis on priors: the application is a single Uvicorn process that
+uses about one core on a host with 16 hardware threads, and the monitoring stack
+uses about 0.03 cores.
 \begin{enumerate}
 \item \emph{The monitoring containers should use meaningful CPU.} They did not:
 about 0.03 cores in total, measured from kernel counters.
@@ -1043,7 +1104,8 @@ the research questions rely on held for deployment ordering (including the
 Docker+CI/CD arm, 8 real GitHub Actions runs, which replicated within its
 original interval), MTTR and peak CPU under stress (Section~\ref{sec:limitations} lists what did not reproduce and
 why). The original run remains the paper's reported dataset because it was the
-pre-planned measurement and every table is derived from it; the replication is
+pre-planned measurement and every table is derived from it (for Experiment~2 it is
+the first of three passes on that installation, Section~\ref{sec:contention}); the replication is
 reported as a robustness check, not as a replacement.
 
 \begin{table*}[t]
@@ -1093,14 +1155,17 @@ different instrument. Table~\ref{tab:pitfalls} summarizes them.
 \label{sec:p1}
 \emph{Symptom.} The memory-stress test that OOM-killed the container in 20/20 original
 runs killed it in 0/20 replication runs, although 16 requests ($\approx$320\,MB) succeeded
-against a 150\,MB limit. \emph{Mechanism.} The allocation is zero-filled. On the replication
-kernel, with transparent huge pages enabled and the underused-huge-page shrinker active, the
+against a 150\,MB limit. \emph{Mechanism (predicted and tested, Table~\ref{tab:thpstride}).} The allocation is zero-filled. On the replication
+kernel, with transparent huge pages enabled and the underused-huge-page shrinker active (the
+kernel documentation calls a huge page underused when its zero-filled pages exceed
+\texttt{max\_ptes\_none}~\cite{kernelthp}), the
 kernel splits mostly-zero huge pages and frees their zero subpages under cgroup pressure,
 so the limit is reached without an OOM kill. \emph{Evidence.} Disabling THP for the one
 probe process restores the kill, and only the surviving cell moves the split counter
-(Table~\ref{tab:thp}, Section~\ref{sec:oomkernel}). \emph{Fix.} Write non-zero data to
-every page, check \texttt{memory.events} for \texttt{oom\_kill}, and report the kernel, THP
-policy and fill pattern.
+(Table~\ref{tab:thp}, Section~\ref{sec:oomkernel}), and a stride probe matches the threshold in the kernel documentation (Table~\ref{tab:thpstride}). \emph{Fix.} Before interpreting
+a stress result, confirm from the kernel that the injected fault occurred: check
+\texttt{memory.events} for \texttt{oom\_kill}~\cite{kernelcgroup}, write non-zero data to every page, and
+report the kernel, THP policy and fill pattern.
 
 \subsection{P2: The load client measures the socket layer}
 \label{sec:p2}
@@ -1112,7 +1177,11 @@ measures the host's socket layer, not the application. \emph{Evidence.} Per-seco
 TIME\_WAIT and proxy CPU series show the collapse, and a keep-alive client on the same host
 is flat (Fig.~\ref{fig:timewait}, Section~\ref{sec:e6results}). \emph{Fix.} Use keep-alive
 connections, record TIME\_WAIT and client and proxy CPU, and check within-case variation
-before comparing cases.
+before comparing cases. Because the Docker daemon runs a userland proxy for loopback traffic by default
+and every request here crosses it~\cite{dockerd}, disabling it or loading from inside the
+container network would also avoid the problem; we tested neither. The TIME\_WAIT state
+that fills up keeps a closed connection's address pair reserved for a fixed
+period~\cite{gont2011}.
 
 \subsection{P3: The sampling window outlasts the load}
 \label{sec:p3}
@@ -1129,6 +1198,13 @@ load and read cgroup \texttt{cpu.stat} at the edges of the load window.
 \label{sec:p4}
 \emph{Symptom.} After the operating-system reinstall, deployment times, throughput and
 detection latencies moved by 12--173\% on the same hardware (Section~\ref{sec:replication}).
+The reinstall is not the only source: on the original installation, an isolated re-run
+of Experiment~2 gave a Docker-only throughput of 1660\,req/s against 2737\,req/s in the
+reported pass, and within a single 10.6-minute session the interleaved re-run drifted
+by about 16\% (Section~\ref{sec:contention}). Failure detection moved from 1.15 to 3.14\,s
+in the replication, and two isolated Experiment~5 sessions on the current software state
+gave 3.10\,s (SD 0.18\,s) and 3.06\,s (SD 0.15\,s), so that shift is stable within an
+environment rather than session noise; we did not identify its cause.
 Later, the same keep-alive Docker-only measurement gave 6{,}559\,req/s in Experiment~6 and
 4{,}759\,req/s in Experiment~7, a week apart ($-27$\%), with unattributed background CPU
 of 0.63 cores against 0.32 cores in Experiment~6. \emph{Mechanism, partly tested.} The
@@ -1143,7 +1219,10 @@ experiments Docker was updated from 29.8.2 to 29.9.0 and the kernel package was 
 (7.2.9-1 to 7.2.9-2) by routine system updates; \texttt{docker-proxy} carries every request,
 so these are the remaining candidates, but we did not test them. \emph{Fix.} Record the full
 software environment, including package versions and power state, with every run; pin
-versions for the duration of a study; and compare configurations only within one session.
+versions for the duration of a study; randomize the order of configurations within a
+session; and run one configuration against itself in a separate session (an A/A
+comparison) to measure the noise floor before reading any difference between
+configurations.
 
 \section{Discussion}
 
@@ -1185,8 +1264,10 @@ bound: on this host the Prometheus--Grafana stack costs at most about 1.4\% of
 throughput and about 0.03 cores, and cAdvisor dominates the tooling's own CPU draw in
 the original run but not in the replication (6.1\% against 2.4\%).
 
-\textbf{RQ4 (does automated CI/CD plus monitoring improve reliability).}
-The evidence here is mixed and should be stated honestly: CI/CD automation
+\textbf{RQ4 (how reliable is the automated CI/CD deployment).} The study has no
+manual-deployment reliability arm, so it cannot say whether automation improves
+reliability, only how reliable the automated path was.
+The evidence is mixed and should be stated honestly: CI/CD automation
 was reliable (7/8, 87.5\%) but not perfect, and the one observed failure was
 attributable to a transient delay in the trigger step rather than to the
 pipeline's own robustness. Critically, 87.5\% is a point estimate that
@@ -1206,8 +1287,13 @@ recovery time, peak CPU under stress, the Prometheus and Grafana CPU draw, and t
 OOM kill when memory is resident. Absolute timings, throughput, latency and detection
 times did not, and two explanations offered in the first campaign (CPU contention as
 the cause of the throughput drop and of the falling CPU reading) are not supported.
-Every finding that failed to reproduce traces to one of the pitfalls in
-Table~\ref{tab:pitfalls} or to the environment change itself.
+Two of the held findings are weaker evidence than the others: the CI/CD build-and-test
+time runs on GitHub-hosted runners that the local reinstall does not touch, and the
+deployment ordering follows from what each configuration starts. The findings that
+failed to reproduce trace to P1--P3 where we could test the mechanism; for the rest
+(absolute timings, detection times) the reinstall changed the operating system,
+kernel, Docker version and an unrecorded power state together, so we cannot say which
+change mattered.
 
 \section{Limitations}
 \label{sec:limitations}
@@ -1245,7 +1331,7 @@ the ephemeral ports (Section~\ref{sec:e6results}), so its pinning result
 (difference-in-differences $+376$\,req/s, 95\% CI $[-343, +1061]$) is
 inconclusive. A keep-alive client is stable and bounds the monitoring cost at
 about 1.4\% of throughput, but one of its two configurations (four load-generator
-processes, 10 runs per case, no multiple-comparison correction) detects a loss of
+processes, 9--10 runs per case, no multiple-comparison correction) detects a loss of
 that size whose mechanism we did not identify. The experiments can rule out large
 monitoring overhead on this host; they cannot rule out small effects.
 \item \textbf{What is and is not reproducible.} From the committed raw data,

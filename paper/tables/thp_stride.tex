@@ -1,0 +1,12 @@
+\begin{tabular}{rrcrrr}
+\toprule
+Stride & Zero pages & Split predicted & OOM-killed & Blocks & THP splits \\
+\midrule
+all zero & 512 & yes & 0/5 & 20 & 157--171 \\
+2 & 256 & no & 5/5 & 7 & 0--1 \\
+4 & 384 & no & 5/5 & 7 & 0--1 \\
+5 & 410 & yes & 4/5 & 13 & 64--76 \\
+6 & 427 & yes & 0/5 & 20 & 166--170 \\
+8 & 448 & yes & 0/5 & 20 & 149--152 \\
+\bottomrule
+\end{tabular}
