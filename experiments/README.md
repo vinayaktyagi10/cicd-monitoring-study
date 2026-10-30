@@ -16,6 +16,8 @@ through that aggregation step — nothing is entered by hand.
 | `scripts/exp3_cpu_stress.py` | E3 — CPU stress detection | Time for Prometheus to observe induced CPU saturation crossing a threshold |
 | `scripts/exp4_memory_stress.py` | E4 — memory stress / OOM behaviour | Time-to-OOM, peak memory, and restart behaviour under a hard memory limit. `--fill` writes a non-zero byte to every allocated page; without it the retained memory is zero-filled and the kernel may reclaim it (THP shrinker), so no OOM occurs |
 | `scripts/exp5_failure_recovery.py` | E5 & E6 — failure detection & recovery | Time for Prometheus to detect a killed container, and time to recover after restart. Both phases live in one script because they are two halves of the same run (kill, then restart, in sequence) — splitting them would mean re-deriving the failure state twice. |
+| `scripts/exp2_interleaved.py` | E2i — Experiment 2 with shuffled case order, an A/A arm and a fresh stack per run | Throughput and `docker stats` readings per run, with block and position columns; analysed by `analyze_exp2_interleaved.py`, checked by `make e2i-prose` |
+| `scripts/diag_thp_stride.py` | P1 prediction test | OOM kill vs the fraction of zero subpages per huge page, against `khugepaged/max_ptes_none`; table by `thp_stride_table.py` |
 | `scripts/loadgen.py` | — | Standalone concurrent HTTP load generator (used inside E2 and available to run independently) |
 | `scripts/stats_sampler.py` | — | Standalone `docker stats` poller (used inside E2 and available to run independently) |
 | `scripts/paper_tables.py` | — | Recomputes every table/prose number from `raw/` in the paper's layout and checks each line appears verbatim in `paper.tex` |

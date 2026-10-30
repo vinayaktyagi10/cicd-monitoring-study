@@ -194,3 +194,12 @@ Experiment 6 uses a fixed-duration load and kernel CPU counters (cgroup v2
 `cpu.stat`, `/proc/stat`) read exactly at the window's edges, randomized case
 order with a fresh stack per run, a cAdvisor-only case, and a CPU-pinned arm
 that tests the contention explanation directly.
+
+## Additional Experiment 2 passes and Experiment 2i (added 2026-10-30)
+
+| Item | Raw file | Script | Used for |
+|---|---|---|---|
+| Experiment 2, passes 2 and 3 (original installation, 2026-09-10) | `raw/exp2_resource.csv` rows 61-120 (chained, disturbed) and 121-180 (isolated) | `scripts/exp2_resource.py --runs 20` | Quoted in the contention section only: means 2895/2597/1799 and 1660/1648/1595 req/s; 14 of 40 monitored runs with errors in pass 2. No table uses them. |
+| Experiment 2i (interleaved, third software state) | `raw/exp2_interleaved.csv`, 80 rows | `scripts/exp2_interleaved.py --blocks 20` (seed 20261030) | Contention section; analysed by `scripts/analyze_exp2_interleaved.py`; every quoted number checked by `make e2i-prose`. |
+| THP stride probe | `raw/diag_thp_stride.csv`, 30 rows | `scripts/diag_thp_stride.py --reps 5` | Table of the P1 prediction test, built by `scripts/thp_stride_table.py` into `paper/tables/thp_stride.tex` and diffed by `make thp-stride`. One parsing note: this file was written by the first version of the script, which could report an event count as blocks reached for runs that finished; the table caps blocks at 20, and the script now stops parsing at `EVENTS`. |
+| Experiment 5 repeats (A/A, current software state) | `raw/exp5_aa_session1.csv`, `raw/exp5_aa_session2.csv`, 20 rows each | `scripts/exp5_failure_recovery.py --out ...`, two separate sessions 90 s apart | Failure MTTD 3.10 s (SD 0.18) and 3.06 s (SD 0.15); quoted in the P4 paragraph, checked by `make e2i-prose`. |

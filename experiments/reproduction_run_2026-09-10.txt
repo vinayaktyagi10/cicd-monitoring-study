@@ -164,3 +164,6 @@ real and re-runnable, but it also surfaces genuine reliability questions
 E4) that are worth investigating and are, if anything, a more honest
 demonstration of real experimental work than a second clean run would have
 been.
+
+--- Addendum 2026-10-30 (written later; the text above is unchanged) ---
+The sentence "Isolating each experiment ... reproduces the paper's numbers cleanly" is too strong for E2. The isolated E2 re-run (rows 121-180 of raw/exp2_resource.csv) reproduced the zero-error rate, not the throughput level: docker / docker_prometheus / docker_full means were 1660 / 1648 / 1595 req/s against the reported 2737 / 2641 / 2449 (first pass), i.e. a Docker-only level 40% lower on the same installation. The chained second pass (rows 61-120) had request errors in 14 of its 40 monitored runs (docker_prometheus 2, docker_full 12) and means of 2895 / 2597 / 1799 req/s. Both are described in the paper (Section on the revised contention explanation). Experiment 2 was later repeated with shuffled case order (raw/exp2_interleaved.csv, scripts/exp2_interleaved.py).
