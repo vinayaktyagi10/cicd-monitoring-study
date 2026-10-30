@@ -1,0 +1,2 @@
+config,n_runs,detection_seconds_max,detection_seconds_mean,detection_seconds_min,detection_seconds_n,detection_seconds_std,recovery_seconds_max,recovery_seconds_mean,recovery_seconds_min,recovery_seconds_n,recovery_seconds_std,run_max,run_mean,run_min,run_n,run_std
+all,20,3.5249,3.1044,2.8874,20,0.1736,2.0324,2.0064,1.9878,20,0.0109,20.0,10.5,1.0,20,5.7663
