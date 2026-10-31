@@ -1,0 +1,16 @@
+rep,stride,nonzero_subpages,zero_subpages,max_ptes_none,predicted_underused,host_thp_enabled,host_shrink_underused,kernel,oom_killed,blocks_reached,d_thp_underused_split_page,d_thp_split_page,d_thp_fault_alloc,d_thp_deferred_split_page
+1,0,0,512,511,True,always,1,7.3.0-5-cachyos,True,7,0,0,85,1
+1,4,128,384,511,False,always,1,7.3.0-5-cachyos,True,7,0,0,85,0
+1,8,64,448,511,False,always,1,7.3.0-5-cachyos,True,7,0,0,84,0
+2,0,0,512,511,True,always,1,7.3.0-5-cachyos,True,7,0,0,82,0
+2,4,128,384,511,False,always,1,7.3.0-5-cachyos,True,7,0,0,85,1
+2,8,64,448,511,False,always,1,7.3.0-5-cachyos,True,7,0,0,84,0
+3,0,0,512,511,True,always,1,7.3.0-5-cachyos,True,7,0,0,85,0
+3,4,128,384,511,False,always,1,7.3.0-5-cachyos,True,7,0,0,86,0
+3,8,64,448,511,False,always,1,7.3.0-5-cachyos,True,7,0,0,85,2
+4,0,0,512,511,True,always,1,7.3.0-5-cachyos,True,7,0,0,82,0
+4,4,128,384,511,False,always,1,7.3.0-5-cachyos,True,7,0,0,83,0
+4,8,64,448,511,False,always,1,7.3.0-5-cachyos,True,7,0,0,82,0
+5,0,0,512,511,True,always,1,7.3.0-5-cachyos,True,7,0,0,83,0
+5,4,128,384,511,False,always,1,7.3.0-5-cachyos,True,7,0,0,83,2
+5,8,64,448,511,False,always,1,7.3.0-5-cachyos,True,7,0,0,83,0

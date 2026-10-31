@@ -889,9 +889,13 @@ policy, \texttt{shrink\_underused} setting and \texttt{max\_ptes\_none} value. O
 
 The host's 409 is not the kernel default. It is written at every boot by the
 \texttt{cachyos-settings} package (\texttt{thp-shrinker.conf}), whose own comment gives
-the default as 511. The replication installed CachyOS. An installation on the
-default of 511, as we infer the original Arch one was but did not record, would have left
-the shrinker inert, which is what the original 20/20 kills look like.
+the default as 511. We then changed it on the host itself, which needs root and was
+restored afterwards: at 511 the all-zero allocation and strides 4 and 8 were each killed in
+5/5 runs with no splits (\texttt{diag\_thp\_host511.csv}), where at 409 the all-zero and
+stride-8 allocations survive in 5/5 (Table~\ref{tab:thpstride}). The replication installed
+CachyOS. An installation on the default of 511, as we infer the original Arch one was but
+did not record, would have left the shrinker inert, which is what the original 20/20 kills
+look like.
 
 \textbf{What this means.} The OOM-kill result is conditional on the memory being
 genuinely resident and non-reclaimable. We observed the zero-fill escape on one kernel
@@ -906,9 +910,9 @@ zero-filled variant it is a property of the kernel configuration.
 and that installation no longer exists, so we cannot show that they are what differed
 between the original and replication runs. Either a THP policy of \texttt{madvise} or the
 default \texttt{max\_ptes\_none} of 511 would be consistent with the original result, and
-we did not test either on the original host. We toggled the host-wide knobs only in the
-guest, on a different kernel and distribution from the host, and did not toggle them on
-the host itself (it needs root). The stride probe ran on a later kernel (7.3.0) than the
+we did not test either on the original host. On the host we changed only
+\texttt{max\_ptes\_none}; the full set of knobs was swept only in the guest, on a different
+kernel and distribution. The stride probe ran on a later kernel (7.3.0) than the
 replication (7.2.9), so we have not shown that the replication kernel used the same
 threshold.
 

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Checks every guest-sweep number quoted in paper/paper.tex against vm_thp_matrix.csv.
 
-    python3 thp_vm_prose.py <vm_thp_matrix.csv> <paper.tex>
+    python3 thp_vm_prose.py <vm_thp_matrix.csv> <paper.tex> [diag_thp_host511.csv]
 """
 import csv
 import re
@@ -35,12 +35,25 @@ def claims(rows):
             f"strides 6 and 8 survived all 20 blocks in {n}/{n}"]
 
 
+def host_claims(rows):
+    assert {r["max_ptes_none"] for r in rows} == {"511"}, "host file is not all at 511"
+    by = {s: [r for r in rows if int(r["stride"]) == s] for s in (0, 4, 8)}
+    n = {len(g) for g in by.values()}
+    assert len(n) == 1 and all(killed(g) == len(g) for g in by.values()), "host probe not all killed"
+    assert all(int(r["d_thp_underused_split_page"]) == 0 for r in rows), "host probe split pages"
+    k = n.pop()
+    return [f"strides 4 and 8 were each killed in {k}/{k} runs with no splits"]
+
+
 def main():
     with open(sys.argv[1], newline="") as fh:
         rows = list(csv.DictReader(fh))
     with open(sys.argv[2]) as fh:
         paper = re.sub(r"\s+", " ", fh.read())
     c = claims(rows)
+    if len(sys.argv) > 3:
+        with open(sys.argv[3], newline="") as fh:
+            c += host_claims(list(csv.DictReader(fh)))
     misses = [s for s in c if s not in paper]
     for s in c:
         print(("MATCH     " if s in paper else "NOT FOUND ") + s)

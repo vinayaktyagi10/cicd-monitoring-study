@@ -63,7 +63,7 @@ thp-stride: venv
 thp-vm: venv
 	$(PY) $(SCRIPTS)/thp_vm_table.py experiments/raw/vm_thp_matrix.csv paper/tables/thp_vm.tex
 	git diff --exit-code --stat -- paper/tables/thp_vm.tex && echo "thp_vm table identical to committed"
-	$(PY) $(SCRIPTS)/thp_vm_prose.py experiments/raw/vm_thp_matrix.csv paper/paper.tex
+	$(PY) $(SCRIPTS)/thp_vm_prose.py experiments/raw/vm_thp_matrix.csv paper/paper.tex experiments/raw/diag_thp_host511.csv
 
 e2i-prose: venv
 	cd $(SCRIPTS) && ../../$(PY) e2i_prose.py
