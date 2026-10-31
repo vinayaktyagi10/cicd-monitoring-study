@@ -103,8 +103,8 @@ underused-page shrinker and a distribution's non-default setting interact, and i
 turns a zero-filled memory stress test into one that applies no pressure. What we add, for
 all four, is a record of how each produced a plausible, wrong or fragile result in a study
 that was otherwise logged and repeated carefully, the diagnostic that exposed it, and a
-cheap check that prevents it. We did not measure how common these errors are in published
-work. The pipeline is the case study, not the contribution.
+cheap check that prevents it. A small literature audit (Section~\ref{sec:audit}) finds
+that the settings behind P1 and P4 are rarely reported. The pipeline is the case study, not the contribution.
 
 \subsection{Research Questions}
 The case study asks three questions about the pipeline and one about the
@@ -306,12 +306,43 @@ container and observability measurement: the kernel's handling of a container's 
 the container runtime's port proxy and the monitoring tool's sampling window, not the
 benchmark binary or the hardware. Of these only P1 is, as far as we found, undocumented;
 P2 and P3 are container-specific instances of port exhaustion and sampling-window
-mismatch, which are well known in general. We did not survey how often published
-container or monitoring studies commit any of the four. P4 is the lesson of Mytkowicz et
+mismatch, which are well known in general. A small audit of published studies
+(Section~\ref{sec:audit}) covers only what they report, not how often they commit any of
+the four. P4 is the lesson of Mytkowicz et
 al.\ and Maricq et al.\ at a different level: on unchanged hardware, a change in the
 software environment moved results further than a single campaign's intervals would
 suggest. We follow Maricq et al.\ only in part: our main intervals are $t$-based, with
 rank tests and bootstrap intervals as checks (Section~\ref{sec:stats}).
+
+\subsection{A Small Audit of What Published Studies Report}
+\label{sec:audit}
+To see whether the settings behind P1 and P4 are normally reported, we read the setup
+description of published container and observability overhead studies. The sample is
+not systematic. We searched the web and arXiv with queries on container and tracing
+overhead, applied a fixed inclusion rule (an empirical study of Docker or other
+container overhead, or of monitoring or tracing overhead on containerized or
+microservice workloads; surveys, position papers, simulation-only studies and papers with
+no measured overhead excluded), and kept 45 papers from 2013 to 2025 that we could read in full.
+Each paper was scanned for the fields below and the matches were checked by reading the
+setup text, or the page image where the text did not extract. One model did the
+searching, scanning and checking, so the checks are not independent, and a field the
+scan did not find may still appear in text we missed; the counts are therefore lower
+bounds on what is reported.
+
+Of the 45 papers, 12 state the kernel version of their own test hosts, and 3 more mention
+a kernel only in a way that does not identify the host's. None states the transparent huge
+page policy. None randomizes or interleaves the order of configurations; one describes
+randomized run order only as background. One runs an identical-configuration control, and
+that paper is itself about benchmarking methodology; it also found that Docker containers
+produced more false positives than the other isolation setups in such controls~\cite{japke2025}.
+Another measured the same Docker workload on three operating systems on identical
+hardware and found the platform mattered~\cite{sobieraj2024}, which is the P4 setting at
+a larger scale.
+
+This audit shows only that the P1 and P4 settings are rarely reported. It does not show
+how often a study committed P1, P2 or P3: most of the 45 are benchmark-suite studies that
+inject no memory pressure, so the pitfalls rarely apply and the denominators are too small
+to estimate a rate.
 
 \section{System Under Test}
 
