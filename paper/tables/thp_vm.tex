@@ -1,0 +1,12 @@
+\begin{tabular}{llrr}
+\toprule
+THP policy & \texttt{shrink\_underused} & \texttt{max\_ptes\_none}\,=409 & \texttt{max\_ptes\_none}\,=511 \\
+\midrule
+always & 0 & 3/3 & 3/3 \\
+always & 1 & 0/3 & 3/3 \\
+madvise & 0 & 3/3 & 3/3 \\
+madvise & 1 & 3/3 & 3/3 \\
+never & 0 & 3/3 & 3/3 \\
+never & 1 & 3/3 & 3/3 \\
+\bottomrule
+\end{tabular}

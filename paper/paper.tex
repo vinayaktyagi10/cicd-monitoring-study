@@ -154,8 +154,8 @@ Pitfall & Symptom here & Mechanism & How it was exposed & Check that prevents it
 P1 Zero-filled memory stress &
 0/20 OOM kills on the replication host, 20/20 originally &
 THP shrinker splits mostly-zero huge pages and frees them under cgroup pressure &
-\texttt{memory.events} at the limit with no OOM kill; THP $\times$ fill diagnostic and stride probe (Tables~\ref{tab:thp}, \ref{tab:thpstride}) &
-Write non-zero data to every page; report kernel, THP policy and fill pattern \\
+\texttt{memory.events} at the limit with no OOM kill; THP $\times$ fill diagnostic, stride probe and guest sweep (Tables~\ref{tab:thp}, \ref{tab:thpstride}, \ref{tab:thpvm}) &
+Write non-zero data to every page; report kernel, THP policy, shrinker, \texttt{max\_ptes\_none} and fill pattern \\
 P2 Per-request load client &
 Throughput varied three-fold between runs and tracked docker-proxy CPU &
 New TCP connection per request exhausts ephemeral ports; TIME\_WAIT and docker-proxy system time dominate &
@@ -855,24 +855,50 @@ default THP, 150\,MB limit, \texttt{max\_ptes\_none}\,=\,409. \emph{Zero pages} 
 \input{tables/thp_stride}
 \end{table}
 
+\textbf{Guest sweep.} The host does not let us change these knobs without root, so we
+repeated the probe in a KVM guest where we are root (Debian 13, kernel 6.12.113, Docker 26.1.5,
+4 vCPU, 4\,GiB; \texttt{vm\_thp\_matrix.py}, 3 runs per cell). The zero-filled allocation
+escaped the OOM kill only with THP \texttt{always}, \texttt{shrink\_underused}\,=1 and
+\texttt{max\_ptes\_none} below its kernel default of 511 (Table~\ref{tab:thpvm}); at 511 nothing
+escaped, shrinker on or off. Values of 0, 200, 409, 500 and 510 all escaped (0/3 killed
+each, 169--174 splits per run) and 511 did not. The stride boundary matched the host: at
+409, strides 2 and 4 were killed in 3/3 runs, stride 5 in 3/3 after 12--13 blocks, and
+strides 6 and 8 survived all 20 blocks in 3/3.
+
+\begin{table}[t]
+\centering
+\caption{Guest sweep, zero-filled allocation: OOM-killed runs out of 3 for each THP
+policy, \texttt{shrink\_underused} setting and \texttt{max\_ptes\_none} value. Only THP
+\texttt{always} with the shrinker on and \texttt{max\_ptes\_none}\,=409 escapes.}
+\label{tab:thpvm}
+\small
+\input{tables/thp_vm}
+\end{table}
+
+The host's 409 is not the kernel default. It is written at every boot by the
+\texttt{cachyos-settings} package (\texttt{thp-shrinker.conf}), whose own comment gives
+the default as 511. The replication installed CachyOS. An installation on the
+default of 511, as we infer the original Arch one was but did not record, would have left
+the shrinker inert, which is what the original 20/20 kills look like.
+
 \textbf{What this means.} The OOM-kill result is conditional on the memory being
 genuinely resident and non-reclaimable. We observed the zero-fill escape on one kernel
 (7.2.9, THP \texttt{always}, \texttt{shrink\_underused=1}) on one machine; whether other
 kernels or THP settings behave the same way we did not test. The safe practice does not
 depend on that answer: a memory-stress test should write non-zero data, and a
 fault-injection study that depends on memory pressure should report the kernel, THP
-policy and fill pattern. The original finding stands for non-zero memory; for the
+policy, shrinker setting, \texttt{max\_ptes\_none} and fill pattern. The original finding stands for non-zero memory; for the
 zero-filled variant it is a property of the kernel configuration.
 
-\textbf{What is not established.} We did not record the original host's THP setting
-and that installation no longer exists, so we cannot show that THP policy is what
-differed between the original and replication runs. A distribution default of
-\texttt{madvise}, under which a process that does not request huge pages behaves like
-the ``disabled'' rows, would be consistent with the original result, but we did not test
-it. We showed that process-level THP is sufficient to flip the outcome here; we did not
-toggle the host-wide \texttt{shrink\_underused} or \texttt{max\_ptes\_none} setting (it
-needs root), and the stride probe ran on a later kernel (7.3.0) than the replication
-(7.2.9), so we have not shown that the replication kernel used the same threshold.
+\textbf{What is not established.} We did not record the original host's THP settings
+and that installation no longer exists, so we cannot show that they are what differed
+between the original and replication runs. Either a THP policy of \texttt{madvise} or the
+default \texttt{max\_ptes\_none} of 511 would be consistent with the original result, and
+we did not test either on the original host. We toggled the host-wide knobs only in the
+guest, on a different kernel and distribution from the host, and did not toggle them on
+the host itself (it needs root). The stride probe ran on a later kernel (7.3.0) than the
+replication (7.2.9), so we have not shown that the replication kernel used the same
+threshold.
 
 \subsection{Failure detection and recovery (RQ2, RQ4)}
 All 20 induced container failures (\texttt{docker kill}) were detected by
@@ -1165,7 +1191,9 @@ kernel, with transparent huge pages enabled and the underused-huge-page shrinker
 kernel documentation calls a huge page underused when its zero-filled pages exceed
 \texttt{max\_ptes\_none}~\cite{kernelthp}), the
 kernel splits mostly-zero huge pages and frees their zero subpages under cgroup pressure,
-so the limit is reached without an OOM kill. \emph{Evidence.} Disabling THP for the one
+so the limit is reached without an OOM kill. The shrinker is inert at the kernel default
+\texttt{max\_ptes\_none}\,=511, so the escape depends on a distribution setting
+(Table~\ref{tab:thpvm}). \emph{Evidence.} Disabling THP for the one
 probe process restores the kill, and only the surviving cell moves the split counter
 (Table~\ref{tab:thp}, Section~\ref{sec:oomkernel}), and a stride probe matches the threshold in the kernel documentation (Table~\ref{tab:thpstride}). \emph{Fix.} Before interpreting
 a stress result, confirm from the kernel that the injected fault occurred: check

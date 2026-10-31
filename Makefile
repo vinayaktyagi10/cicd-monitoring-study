@@ -3,7 +3,7 @@ SCRIPTS := experiments/scripts
 CAMPAIGN ?= $(lastword $(sort $(wildcard experiments/replication/*)))
 
 .PHONY: help venv test tables stats validate figures verify-figures paper reproduce \
-        image campaign campaign-cicd validate-campaign overhead e6-prose e7-prose e2i-prose thp-stride stats-prose replication-check grafana-figure
+        image campaign campaign-cicd validate-campaign overhead e6-prose e7-prose e2i-prose thp-stride thp-vm stats-prose replication-check grafana-figure
 
 help:
 	@echo "No Docker needed (derive everything from raw data):"
@@ -60,6 +60,11 @@ thp-stride: venv
 	$(PY) $(SCRIPTS)/thp_stride_table.py experiments/raw/diag_thp_stride.csv paper/tables/thp_stride.tex
 	git diff --exit-code --stat -- paper/tables/thp_stride.tex && echo "thp_stride table identical to committed"
 
+thp-vm: venv
+	$(PY) $(SCRIPTS)/thp_vm_table.py experiments/raw/vm_thp_matrix.csv paper/tables/thp_vm.tex
+	git diff --exit-code --stat -- paper/tables/thp_vm.tex && echo "thp_vm table identical to committed"
+	$(PY) $(SCRIPTS)/thp_vm_prose.py experiments/raw/vm_thp_matrix.csv paper/paper.tex
+
 e2i-prose: venv
 	cd $(SCRIPTS) && ../../$(PY) e2i_prose.py
 
@@ -72,7 +77,7 @@ stats-prose: venv
 replication-check: validate-campaign stats-prose
 	git diff --exit-code --stat -- $(CAMPAIGN)/results/original_vs_replication.csv paper/tables/replication.tex paper/tables/reproducibility.tex paper/tables/thp_diag.tex && echo "replication table identical to committed"
 
-reproduce: test tables overhead e6-prose e7-prose e2i-prose thp-stride stats validate replication-check verify-figures paper
+reproduce: test tables overhead e6-prose e7-prose e2i-prose thp-stride thp-vm stats validate replication-check verify-figures paper
 
 image:
 	docker compose build app

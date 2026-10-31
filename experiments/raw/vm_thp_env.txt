@@ -1,0 +1,11 @@
+# guest used for experiments/raw/vm_thp_matrix.csv (qemu/KVM, 4 vCPU, 4 GiB, cloud image debian-13-genericcloud-amd64)
+Linux thpvm 6.12.113+deb13-cloud-amd64 #1 SMP PREEMPT_DYNAMIC Debian 6.12.113-1 (2026-10-15) x86_64 GNU/Linux
+Docker version 26.1.5+dfsg1, build a72d7cd
+13.7
+# host tmpfiles.d (cachyos-settings 1:1.4.1-1) /usr/lib/tmpfiles.d/thp-shrinker.conf
+# THP Shrinker has been added in the 6.12 Kernel
+# Default Value is 511
+# THP=always policy vastly overprovisions THPs in sparsely accessed memory areas, resulting in excessive memory pressure and premature OOM killing
+# 409 means that any THP that has more than 409 out of 512 (80%) zero filled filled pages will be split.
+# This reduces the memory usage, when THP=always used and the memory usage goes down to around the same usage as when madvise is used, while still providing an equal performance improvement
+w! /sys/kernel/mm/transparent_hugepage/khugepaged/max_ptes_none - - - - 409
