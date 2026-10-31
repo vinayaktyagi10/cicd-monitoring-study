@@ -30,7 +30,7 @@ the same hardware after reinstalling the operating system. Four measurement pitf
 changed what the data appeared to show:
 (P1)~\emph{zero pages are not memory pressure}: a zero-filled stress test stopped
 triggering OOM kills on the replication kernel because its transparent-huge-page
-shrinker reclaimed the zeroed pages;
+shrinker, enabled by a non-default distribution setting, reclaimed the zeroed pages;
 (P2)~\emph{the load client measures the socket layer}: a client opening a new connection
 per request measured ephemeral-port exhaustion in \texttt{docker-proxy}, not the
 application;
@@ -39,8 +39,9 @@ than a 0.11\,s load produced an apparent CPU-contention effect that kernel count
 not confirm;
 (P4)~\emph{absolute numbers do not travel}: most values moved by 12--173\% across the
 reinstall, and by 27\% between two later sessions after routine package updates.
+P2--P4 are known practice; P1 is the one we did not find documented.
 What held: the ordering of deployment times and the cost of re-running build and test on
-every CI/CD deployment (both largely independent of the local software environment),
+every CI/CD deployment (both follow from what each configuration does),
 recovery time after a container kill, and an OOM kill when memory
 is resident. The first campaign's explanation of a throughput drop as CPU contention
 between monitoring and application did not hold and is withdrawn: with a stable client
@@ -94,13 +95,19 @@ is added (Section~\ref{sec:p3}).
 deployment times, throughput and detection latencies moved by 12--173\% after a reinstall
 (Section~\ref{sec:p4}).
 \end{enumerate}
-None of these mechanisms is new on its own. What we add is evidence of how each one
-produced a plausible, wrong or fragile result in a study that was otherwise
-logged and repeated carefully, the diagnostic that exposed it, and a cheap check that
-prevents it. The pipeline is the case study, not the contribution.
+P2, P3 and P4 are known measurement practice (port exhaustion under per-request
+connections, sampling windows that miss short loads, environment sensitivity of absolute
+numbers), and we do not present them as discoveries. P1 is the one we did not find
+documented in the work we reviewed: it comes from how transparent huge pages, the kernel's
+underused-page shrinker and a distribution's non-default setting interact, and it
+turns a zero-filled memory stress test into one that applies no pressure. What we add, for
+all four, is a record of how each produced a plausible, wrong or fragile result in a study
+that was otherwise logged and repeated carefully, the diagnostic that exposed it, and a
+cheap check that prevents it. We did not measure how common these errors are in published
+work. The pipeline is the case study, not the contribution.
 
 \subsection{Research Questions}
-The case study asks four questions about the pipeline and one about the
+The case study asks three questions about the pipeline and one about the
 measurements themselves.
 \begin{itemize}
 \item \textbf{RQ1.} How does containerization affect deployment time and resource
@@ -109,8 +116,7 @@ use, and what does CI/CD automation add?
 container failure?
 \item \textbf{RQ3.} What does running Prometheus and Grafana alongside the
 application cost?
-\item \textbf{RQ4.} How reliable is the automated CI/CD deployment?
-\item \textbf{RQ5.} Which of these findings survive a change of software
+\item \textbf{RQ4.} Which of these findings survive a change of software
 environment on the same hardware, and which measurement choices explain the ones
 that do not?
 \end{itemize}
@@ -118,9 +124,11 @@ that do not?
 \section{Contributions}
 \label{sec:contributions}
 \begin{enumerate}
-\item \textbf{Four measurement pitfalls, each with mechanism and evidence.} For
+\item \textbf{Four measurement pitfalls, each with mechanism and evidence; P1 is the
+substantive one.} For
 P1 we show with a crossed diagnostic that disabling transparent huge pages for the
-one process restores the OOM kill (Table~\ref{tab:thp}). For P2 we show throughput
+one process restores the OOM kill (Table~\ref{tab:thp}), and with a host-wide sweep in a
+guest that the escape needs a non-default \texttt{max\_ptes\_none} (Table~\ref{tab:thpvm}). For P2 we show throughput
 collapsing as TIME\_WAIT sockets pass the ephemeral port range
 (Fig.~\ref{fig:timewait}). For P3 we show the bimodal CPU reading and its
 disappearance under kernel-counter measurement. For P4 we classify every finding
@@ -130,10 +138,11 @@ Table~\ref{tab:pitfalls} gives the check that prevents each one.
 explanation from the first campaign is tested against five of its own predictions and
 withdrawn (Section~\ref{sec:contention}); what remains is a bound on monitoring
 overhead: about 1.4\% of throughput at worst, with 95\% intervals reaching 2.3\%.
-\item \textbf{Case-study findings that held.} Deployment ordering, the CI/CD
-build-and-test cost, recovery time after a container kill, peak CPU under stress, the
-Prometheus and Grafana CPU draw, and the OOM kill with resident memory all
-reproduced.
+\item \textbf{Case-study findings that held, and how much they are worth.} Deployment
+ordering, the CI/CD build-and-test cost, recovery time after a container kill, peak CPU
+under stress, the Prometheus and Grafana CPU draw, and the OOM kill with resident memory
+all reproduced. The first two follow from what each configuration does and are weak
+evidence about the tools; the rest are measurements of one small service on one host.
 \item \textbf{A traceable artifact.} Raw per-run data, experiment and analysis
 scripts, and a one-command rebuild of every table, statistic and figure from that
 raw data (\texttt{make reproduce}, no Docker needed), with every number quoted in the
@@ -190,7 +199,7 @@ al.~\cite{lingayat2018} and Mavridis and Karatza~\cite{mavridis2017} extend
 this line to deployment/startup time and to containers nested inside VMs
 respectively, but both stop at the container layer: neither introduces a
 CI/CD pipeline or a monitoring stack, so their measurements cannot speak to
-RQ2--RQ4. Ekanayaka et al.~\cite{ekanayaka2023} is the closest system to the
+RQ2--RQ3. Ekanayaka et al.~\cite{ekanayaka2023} is the closest system to the
 one built here --- \emph{KubFlow} integrates Git, Jenkins, ArgoCD, Terraform,
 Docker, Kubernetes, Prometheus, and Grafana into a single DevOps
 infrastructure --- but its evaluation is a pass/fail checklist of eight
@@ -292,10 +301,13 @@ that combining containers, CI/CD and monitoring is itself a research question, n
 that the pitfalls in Section~\ref{sec:pitfalls} are individually unknown. Our
 claim is narrower: in one replicated study, each of them produced a wrong or
 fragile result that a single campaign would have reported as a finding, and each is
-detectable with a cheap check. Relative to the methodology studies, P1--P3 are specific
-to container and observability measurement: they come from the kernel's handling of a
-container's memory, the container runtime's port proxy and the monitoring tool's sampling
-window, not from the benchmark binary or the hardware. P4 is the lesson of Mytkowicz et
+detectable with a cheap check. Relative to the methodology studies, P1--P3 arise in
+container and observability measurement: the kernel's handling of a container's memory,
+the container runtime's port proxy and the monitoring tool's sampling window, not the
+benchmark binary or the hardware. Of these only P1 is, as far as we found, undocumented;
+P2 and P3 are container-specific instances of port exhaustion and sampling-window
+mismatch, which are well known in general. We did not survey how often published
+container or monitoring studies commit any of the four. P4 is the lesson of Mytkowicz et
 al.\ and Maricq et al.\ at a different level: on unchanged hardware, a change in the
 software environment moved results further than a single campaign's intervals would
 suggest. We follow Maricq et al.\ only in part: our main intervals are $t$-based, with
@@ -617,7 +629,7 @@ not distinguishable, not shown equal.
 \section{Results}
 \label{sec:results}
 
-\subsection{Deployment time and reliability (RQ1, RQ4)}
+\subsection{Deployment time and reliability (RQ1)}
 Table~\ref{tab:deploy} reports wall-clock deployment time for the three fast
 configurations and CI/CD-inclusive deployment time for the fourth.
 Containerizing a fixed local image adds a consistent $\approx$0.86s of fixed
@@ -626,10 +638,10 @@ monitoring stack on top of Docker adds a further $\approx$0.10s
 (1.552s vs.\ 1.454s mean) since Compose brings up four containers rather than
 one but all four start in parallel. The CI/CD-automated path is roughly
 35$\times$ slower (50.2s vs.\ 1.454s mean) because it re-pays the full test-then-build
-cost on every deployment rather than reusing a pre-built image --- this is
-the direct cost of automation, traded against the reliability and
-repeatability of not requiring a human to run the equivalent commands by
-hand. Of 8 triggered CI/CD runs, 7 completed successfully; the one failure
+cost on every deployment rather than reusing a pre-built image. This follows from what
+the path contains (a remote test run and an image build that the other
+configurations do not perform), so it measures the size of that step, not a property
+of automation. Of 8 triggered CI/CD runs, 7 completed successfully; the one failure
 was traced to a transient delay in the workflow being registered by GitHub's
 API immediately after being triggered, rather than to a defect in the
 pipeline itself, and is reported as observed rather than discarded.
@@ -900,7 +912,7 @@ the host itself (it needs root). The stride probe ran on a later kernel (7.3.0) 
 replication (7.2.9), so we have not shown that the replication kernel used the same
 threshold.
 
-\subsection{Failure detection and recovery (RQ2, RQ4)}
+\subsection{Failure detection and recovery (RQ2)}
 All 20 induced container failures (\texttt{docker kill}) were detected by
 Prometheus's \texttt{up\{job="app"\}} series, mean time to detect (MTTD)
 1.15s (std 0.21s, min 0.82s, max 2.03s) --- close to the theoretical floor
@@ -1267,12 +1279,13 @@ time ($\approx$0.86s here) and a resource footprint dominated by the
 application's own working set (36\,MB) rather than by container overhead
 per se --- consistent with the classic finding in
 Felter et al.~\cite{felter2015} that containers add near-zero CPU/memory
-overhead relative to native execution. The more consequential RQ1 finding in
-this study is that a CI/CD-automated deployment is not simply "Docker plus a
-trigger": it is roughly 35$\times$ slower end-to-end because it re-runs the
-full build-and-test cycle, a cost invisible to studies (such as
-Lingayat et al.~\cite{lingayat2018}) that measure only container startup
-time in isolation.
+overhead relative to native execution. A CI/CD-automated deployment is
+roughly 35$\times$ slower end-to-end because it includes the build and test run; that is
+true by construction and we report it only so the size of the step is on record, not as
+a finding about automation. The automated path completed 7 of 8 runs; the 95\% Wilson
+score interval for 7 successes out of 8 trials is $[52.9\%, 97.8\%]$, so the data are
+consistent with anything from roughly half to nearly all deployments succeeding. The study
+has no manual-deployment arm and cannot say whether automation improves reliability.
 
 \textbf{RQ2 (monitoring's effect on detecting degradation and failure).}
 Prometheus detected every induced CPU saturation event and every container
@@ -1297,23 +1310,7 @@ bound: on this host the Prometheus--Grafana stack costs at most about 2.3\% of
 throughput (95\% interval limit; 1.4\% at worst observed) and about 0.03 cores, and cAdvisor dominates the tooling's own CPU draw in
 the original run but not in the replication (6.1\% against 2.4\%).
 
-\textbf{RQ4 (how reliable is the automated CI/CD deployment).} The study has no
-manual-deployment reliability arm, so it cannot say whether automation improves
-reliability, only how reliable the automated path was.
-The evidence is mixed and should be stated honestly: CI/CD automation
-was reliable (7/8, 87.5\%) but not perfect, and the one observed failure was
-attributable to a transient delay in the trigger step rather than to the
-pipeline's own robustness. Critically, 87.5\% is a point estimate that
-should not be quoted on its own: the 95\% Wilson score interval for 7
-successes out of 8 trials is $[52.9\%, 97.8\%]$ --- at this sample size the
-data are consistent with anywhere from roughly half to nearly all CI/CD
-deployments succeeding, and the point estimate alone overstates the
-precision of the claim. A larger $n$ for the CI/CD arm (constrained here
-by real GitHub Actions minutes and wall-clock cost, Section~\ref{sec:limitations})
-would be needed to narrow this interval and bound the reliability claim more
-tightly.
-
-\textbf{RQ5 (what survives a change of environment).}
+\textbf{RQ4 (what survives a change of environment).}
 Table~\ref{tab:reproducibility} gives the full classification. Relative and
 structural findings held: the deployment ordering, the CI/CD build-and-test cost,
 recovery time, peak CPU under stress, the Prometheus and Grafana CPU draw, and the

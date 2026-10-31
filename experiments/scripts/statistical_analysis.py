@@ -50,7 +50,7 @@ def section(title):
 
 
 def main():
-    section("1. CI/CD deployment reliability (RQ4) -- n=8, 7 successes")
+    section("1. CI/CD deployment reliability (RQ1) -- n=8, 7 successes")
     lo, hi = wilson_ci(7, 8)
     print(f"Point estimate: 7/8 = 87.5%")
     print(f"95% Wilson score CI: [{lo*100:.1f}%, {hi*100:.1f}%]")
