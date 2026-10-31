@@ -16,7 +16,7 @@ cAdvisor CPU draw & Change $-65.8$ to $-60.7$\% \\
 OOM kill when the allocated memory is zero-filled & 20/20 killed originally, 0/20 in the replication \\
 \midrule
 \multicolumn{2}{@{}l}{\textit{Not supported by replication}} \\
-Monitoring lowers throughput through host CPU contention & Replication means 4041, 3996, 4033\,req/s, not monotone; monitoring used 0.03 cores and keep-alive throughput stayed within 1.4\%; the penalty did not grow with background load (Exp.~7) \\
+Monitoring lowers throughput through host CPU contention & Replication means 4041, 3996, 4033\,req/s, not monotone; monitoring used 0.03 cores, the largest keep-alive loss was 1.4\% and no 95\% interval reached beyond 2.3\%; the penalty did not grow with background load (Exp.~7) \\
 Application CPU\% falls because monitoring competes for CPU & The reading falls again (7.4 $\to$ 3.5 $\to$ 1.9\%) but is bimodal: a 0.11\,s load sampled over a longer window \\
 \midrule
 \multicolumn{2}{@{}l}{\textit{Inconclusive}} \\

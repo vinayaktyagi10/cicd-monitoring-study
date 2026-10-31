@@ -94,12 +94,32 @@ def contrasts(cs):
         w = sl.welch(a, b)
         g = sl.hedges_g_ci(a, b)
         mon = statistics.mean(col(rows, "load_monitoring_cores"))
+        base_mean = statistics.mean(b)
         out.append({"cell": cell_name((case, pinned, procs)), "vs": cell_name(("docker", pinned, procs)),
                     "throughput_diff": w["diff"], "diff_lo": w["lo"], "diff_hi": w["hi"],
-                    "pct_change": 100 * w["diff"] / statistics.mean(b), "welch_p": w["p"],
+                    "pct_change": 100 * w["diff"] / base_mean, "pct_lo": 100 * w["lo"] / base_mean,
+                    "pct_hi": 100 * w["hi"] / base_mean, "welch_p": w["p"],
                     "hedges_g": g[0], "g_lo": g[1], "g_hi": g[2], "cliffs_delta": sl.cliffs_delta(a, b),
                     "monitoring_cores": mon,
                     "rps_lost_per_monitoring_core": -w["diff"] / mon if mon else float("nan")})
+    return out
+
+
+def blocked_contrasts(cs):
+    out = []
+    for (case, pinned, procs), rows in cs.items():
+        base = cs.get(("docker", pinned, procs))
+        if case == "docker" or not base:
+            continue
+        ref = {r["block"]: r["throughput_ok_rps"] for r in base}
+        pairs = [(r["throughput_ok_rps"] - ref[r["block"]], ref[r["block"]]) for r in rows if r["block"] in ref]
+        diffs = [d for d, _ in pairs]
+        m, lo, hi = sl.mean_ci(diffs)
+        base_mean = statistics.mean(v for _, v in pairs)
+        out.append({"cell": cell_name((case, pinned, procs)), "vs": cell_name(("docker", pinned, procs)),
+                    "n_blocks": len(pairs), "throughput_diff": m, "diff_lo": lo, "diff_hi": hi,
+                    "pct_change": 100 * m / base_mean, "pct_lo": 100 * lo / base_mean,
+                    "pct_hi": 100 * hi / base_mean})
     return out
 
 
@@ -267,9 +287,11 @@ def main():
     rows = load(args.csv)
     cs = cells(rows)
     summary, con, did, rel = summary_table(cs), contrasts(cs), contention_test(cs), relationships(rows)
+    blk = blocked_contrasts(cs)
     report(summary, con, did, rel)
     write_csv(os.path.join(outdir, "cells.csv"), summary)
     write_csv(os.path.join(outdir, "contrasts_vs_docker.csv"), con)
+    write_csv(os.path.join(outdir, "contrasts_blocked.csv"), blk)
     write_csv(os.path.join(outdir, "contention_test.csv"), did)
     write_csv(os.path.join(outdir, "throughput_vs_cpu.csv"), rel)
     figures(cs, rows, outdir)

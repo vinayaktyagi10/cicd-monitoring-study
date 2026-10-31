@@ -133,6 +133,14 @@ def keepalive_claims(rows, rows4, per_rows):
         out.append(("loadgen x4 +Grafana vs Docker", f"four load-generator processes "
                                                      f"({signed(c4['pct_change'], 1)}\\%, 95\\% CI "
                                                      f"{interval(c4['diff_lo'], c4['diff_hi'], 0)}\\,req/s)"))
+        b4 = {c["cell"]: c for c in ao.blocked_contrasts(cs4)}[ao.cell_name(("docker_full", False, 4))]
+        out.append(("loadgen x4 +Grafana, paired by block",
+                    f"the paired difference was {signed(b4['throughput_diff'], 0)}\\,req/s, 95\\% CI "
+                    f"{interval(b4['diff_lo'], b4['diff_hi'], 0)} ({b4['n_blocks']} blocks)"))
+    allcon = [c for r in (rows, rows4) if r for c in ao.contrasts(ao.cells(r)) if "pinned" not in c["cell"]]
+    out.append(("largest observed loss", f"the largest observed loss is {f(max(-c['pct_change'] for c in allcon), 1)}\\%"))
+    out.append(("worst 95% interval limit", f"no 95\\% interval in the unpinned contrasts reaches beyond a "
+                                            f"{f(max(-c['pct_lo'] for c in allcon), 1)}\\% loss"))
     return out
 
 

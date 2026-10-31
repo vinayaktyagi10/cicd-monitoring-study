@@ -129,14 +129,16 @@ def findings(campaign):
     ka4 = read(os.path.join(EXP, "results", "overhead_keepalive_loadgen4", "contrasts_vs_docker.csv"))
     grafana = [next(r for r in ka if r["cell"] == "+Grafana"), next(r for r in ka4 if r["cell"] == "+Grafana x4 loadgen")]
     worst = max(abs(float(r["pct_change"])) for r in grafana)
+    limit = max(-float(r["pct_lo"]) for r in ka + ka4 if "pinned" not in r["cell"])
     mon = float(grafana[0]["monitoring_cores"])
     e7 = read(os.path.join(EXP, "results", "loaded_overhead", "did.csv"))[0]
     require(not ordered(tp, increasing=False) and worst < 5 and e7["verdict"] == "not supported",
             "contention not supported")
     add("Monitoring lowers throughput through host CPU contention", UNSUPPORTED,
         "Replication means " + ", ".join(f"{v:.0f}" for v in tp)
-        + f"\\,req/s, not monotone; monitoring used {mon:.2f} cores and keep-alive throughput stayed within"
-        f" {worst:.1f}\\%; the penalty did not grow with background load (Exp.~7)")
+        + f"\\,req/s, not monotone; monitoring used {mon:.2f} cores, the largest keep-alive loss was"
+        f" {worst:.1f}\\% and no 95\\% interval reached beyond {limit:.1f}\\%; the penalty did not grow with"
+        " background load (Exp.~7)")
     app_cpu = [mean_of(cmp_rows, m) for m in ("App CPU%, Docker", "App CPU%, +Prometheus", "App CPU%, +Grafana")]
     add("Application CPU\\% falls because monitoring competes for CPU", UNSUPPORTED,
         "The reading falls again (" + " $\\to$ ".join(f"{v:.1f}" for v in app_cpu)

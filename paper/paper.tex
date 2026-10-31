@@ -44,8 +44,9 @@ every CI/CD deployment (both largely independent of the local software environme
 recovery time after a container kill, and an OOM kill when memory
 is resident. The first campaign's explanation of a throughput drop as CPU contention
 between monitoring and application did not hold and is withdrawn: with a stable client
-the monitoring stack used about 0.03 cores and cost at most about 1.4\% of throughput,
-and the cost did not grow under background CPU load. An interleaved re-run of the
+the monitoring stack used about 0.03 cores and cost at worst about 1.4\% of throughput,
+with no 95\% interval reaching a loss above 2.3\%, and the cost did not grow under
+background CPU load. An interleaved re-run of the
 original experiment, with an identical-configuration control, found no monitoring effect
 but a downward drift of about 16\% over 11 minutes, enough to produce the original drop
 under a fixed case order. For each pitfall we give the symptom, mechanism, evidence
@@ -128,7 +129,7 @@ Table~\ref{tab:pitfalls} gives the check that prevents each one.
 \item \textbf{A retracted claim, reported as retracted.} The CPU-contention
 explanation from the first campaign is tested against five of its own predictions and
 withdrawn (Section~\ref{sec:contention}); what remains is a bound on monitoring
-overhead of about 1.4\% of throughput.
+overhead: about 1.4\% of throughput at worst, with 95\% intervals reaching 2.3\%.
 \item \textbf{Case-study findings that held.} Deployment ordering, the CI/CD
 build-and-test cost, recovery time after a container kill, peak CPU under stress, the
 Prometheus and Grafana CPU draw, and the OOM kill with resident memory all
@@ -673,7 +674,7 @@ trend are statistically distinguishable (Docker vs.\ +Grafana:
 $t{=}3.57$, $p{=}0.0011$, Cohen's $d{=}1.13$), but the middle step is not
 (Docker vs.\ +Prometheus: $t{=}1.37$, $p{=}0.177$). This drop did not
 survive: the replication means have no ordering (4041, 3996 and 4033\,req/s), and with
-a stable client Experiment~6 bounds the monitoring effect at about 1.4\%, so we do not
+a stable client Experiment~6 bounds the monitoring effect at 2.3\% (95\% interval limit), so we do not
 attribute the original drop to monitoring (Table~\ref{tab:reproducibility},
 Section~\ref{sec:contention}). Mean and p95 latency both rise numerically but \emph{none} of the
 three pairwise differences reach significance at $\alpha{=}0.05$ (all
@@ -933,7 +934,7 @@ Experiment~6 throughput cannot be attributed to monitoring. Experiment~2's
 300-request burst is too short to exhaust the ports, so this does not explain
 its throughput trend; that trend did not reproduce in the replication
 (Section~\ref{sec:replication}), and the keep-alive result below bounds the
-effect at about 1.4\%.
+effect at 2.3\% (95\% interval limit).
 
 \begin{figure}[t]
 \centering
@@ -963,9 +964,13 @@ missing from the log). We did
 not correct for the number of contrasts examined, and the 20-run
 and 10-run designs were not powered for effects this small. We therefore
 report a bound, not an absence: on this host, with a client that does not
-exhaust ports, monitoring costs at most about 1.4\% of throughput, and one
-of the two keep-alive configurations detects a loss of that size. We did not
-identify its mechanism.
+exhaust ports, the largest observed loss is 1.4\% of throughput and no 95\% interval in the
+unpinned contrasts reaches beyond a 2.3\% loss. One of the two keep-alive configurations
+detects a loss of the observed size. The runs came in randomized blocks, so we also paired
+each case with the Docker-only run of the same block; for that configuration the paired
+difference was $-104$\,req/s, 95\% CI $[-160, -48]$ (9 blocks), no tighter than the
+independent-groups interval, so block-to-block drift is not what limits the precision. We did not
+identify the mechanism.
 
 \begin{figure}[t]
 \centering
@@ -1073,7 +1078,7 @@ shows a penalty whose interval excludes zero, and there is no trend across level
 sampled by a longer interval (Section~\ref{sec:results}), not a scheduling effect.
 (ii)~The original throughput drop cannot be attributed to monitoring. It did not
 reproduce (replication means of 4041, 3996 and 4033\,req/s have no ordering), and with
-a client that does not exhaust ports the monitoring effect is at most 1.4\%, several
+a client that does not exhaust ports the monitoring effect is at most 2.3\% (95\% interval limit), several
 times smaller. What did drive throughput in the per-request client was socket exhaustion
 and host load (Section~\ref{sec:e6results}). (iii)~What remains is a loss of about 1.4\% in
 one of two keep-alive configurations, associated with about 0.03 cores of monitoring CPU.
@@ -1260,8 +1265,8 @@ measurement artifact; the monitoring containers drew about 0.03 cores; and with 
 stable client throughput was within 1.4\% of Docker-only, a loss one of two
 configurations detects and whose mechanism is unidentified. Under background CPU load up
 to 60\% the penalty did not grow (Experiment~7). Our answer to RQ3 is therefore a
-bound: on this host the Prometheus--Grafana stack costs at most about 1.4\% of
-throughput and about 0.03 cores, and cAdvisor dominates the tooling's own CPU draw in
+bound: on this host the Prometheus--Grafana stack costs at most about 2.3\% of
+throughput (95\% interval limit; 1.4\% at worst observed) and about 0.03 cores, and cAdvisor dominates the tooling's own CPU draw in
 the original run but not in the replication (6.1\% against 2.4\%).
 
 \textbf{RQ4 (how reliable is the automated CI/CD deployment).} The study has no
@@ -1330,7 +1335,7 @@ client is unreliable: its throughput varied roughly three-fold, tracked host loa
 the ephemeral ports (Section~\ref{sec:e6results}), so its pinning result
 (difference-in-differences $+376$\,req/s, 95\% CI $[-343, +1061]$) is
 inconclusive. A keep-alive client is stable and bounds the monitoring cost at
-about 1.4\% of throughput, but one of its two configurations (four load-generator
+2.3\% of throughput (95\% interval limit), but one of its two configurations (four load-generator
 processes, 9--10 runs per case, no multiple-comparison correction) detects a loss of
 that size whose mechanism we did not identify. The experiments can rule out large
 monitoring overhead on this host; they cannot rule out small effects.
@@ -1430,8 +1435,8 @@ Repeating it on the same hardware after an operating-system reinstall showed whi
 them were properties of the pipeline and which were properties of how we measured it.
 What held: the ordering of deployment times, the cost of re-running build and test on
 every CI/CD deployment, recovery time after a container kill, and an OOM kill when
-memory is resident. Monitoring cost at most about 1.4\% of throughput and about 0.03
-cores with a stable client, and the first campaign's CPU-contention explanation is
+memory is resident. Monitoring cost at most about 2.3\% of throughput (95\% interval
+limit) and about 0.03 cores with a stable client, and the first campaign's CPU-contention explanation is
 withdrawn. Whether a loss of about 1\% exists, whether CPU pinning changes it, and what
 caused a 27\% drift between two later sessions remain inconclusive. What did not hold
 traced to four pitfalls: kernel reclaim
